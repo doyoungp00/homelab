@@ -1,0 +1,5 @@
+---
+creation_rules:
+  # Any file named `secret.sops.env` should use this public key.
+  - path_regex: secret\.sops\.env$
+    age: age1a6en5d6rswucag359md52g4akz4vkhrpleunxwvenzstm6e25crspsrwf0

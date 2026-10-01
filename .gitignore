@@ -1,0 +1,9 @@
+# Secrets
+*.key
+secret.env
+.env
+.decrypted~*
+
+# Python
+__pycache__/
+*.pyc
