@@ -28,6 +28,9 @@ Usage (run from the repo root):
   python -m scripts.encrypt_secrets --shared            # write back
 
   python -m scripts.encrypt_secrets --all               # every service including shared
+
+In order to drop an old key from secret.sops.env:
+  sops unset --input-type dotenv --output-type dotenv path/to/secret.sops.env '["KEY_NAME"]'
 """
 
 from __future__ import annotations

@@ -1,0 +1,18 @@
+services:
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:latest
+    container_name: calibre-web
+    restart: unless-stopped
+    ports:
+      - "${PORT:?PORT not set}:8083"
+    env_file:
+      - path: .env # Decrypted from secret.sops.env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      # Include Calibre's ebook-convert binary (x64 only)
+      - DOCKER_MODS=linuxserver/mods:universal-calibre
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/calibre-web/config:/config
+      - ${BOOKS_DIR:?BOOKS_DIR not set}:/books
