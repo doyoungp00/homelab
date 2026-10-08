@@ -46,6 +46,40 @@ def encrypt_dotenv(path: Path, values: dict[str, str]) -> None:
     )
 
 
+def configure_git_identity(path: Path) -> None:
+    subprocess.run(
+        ["git", "-C", str(path), "config", "user.email", "test@example.com"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(path), "config", "user.name", "Test"], check=True
+    )
+
+
+def init_git_repo(path: Path) -> None:
+    """Create a fresh git repo at `path` with branch `main` and a test identity."""
+    path.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["git", "init", "-q", "-b", "main", str(path)], check=True)
+    configure_git_identity(path)
+
+
+def git_rev_parse(path: Path, ref: str) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(path), "rev-parse", ref],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip()
+
+
+def git_commit_all(path: Path, message: str) -> str:
+    """Stage everything under `path` and commit it. Returns the new commit sha."""
+    subprocess.run(["git", "-C", str(path), "add", "-A"], check=True)
+    subprocess.run(["git", "-C", str(path), "commit", "-q", "-m", message], check=True)
+    return git_rev_parse(path, "HEAD")
+
+
 def fake_encrypted_dotenv_text(keys: list[str]) -> str:
     """Builds text that passes is_encrypted_dotenv()'s structural check
     without needing real SOPS. The ENC[...] payloads are not real ciphertext

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
@@ -7,7 +9,10 @@ import pytest
 from helpers import (
     AGE_KEYGEN_AVAILABLE,
     SOPS_AVAILABLE,
+    configure_git_identity,
     generate_age_key,
+    git_commit_all,
+    init_git_repo,
     write_sops_yaml,
 )
 
@@ -93,6 +98,75 @@ def encrypt_paths(
         encrypt_secrets, "SHARED_SECRET", shared_env_dir / "secret.sops.env"
     )
     return encrypt_secrets
+
+
+class DeployModule(Protocol):
+    """Structural shape of `scripts.deploy` as used by its tests.
+    See `DecryptSecretsModule` for why this exists."""
+
+    REPO_ROOT: Path
+    SERVICES_DIR: Path
+    LOCK_FILE: Path
+    BRANCH: str
+
+    class DeployError(RuntimeError): ...
+
+    def run(self, *args: str) -> str: ...
+    def changed_service_names(self, local: str, remote: str) -> set[str]: ...
+    def apply_service(self, service_dir: Path) -> None: ...
+    def prune_images(self) -> None: ...
+    def all_service_dirs(self) -> list[Path]: ...
+    def deploy(self, force: bool) -> int: ...
+    def main(self, argv: list[str]) -> int: ...
+
+
+@pytest.fixture
+def deploy_paths(tmp_repo: Path, monkeypatch: pytest.MonkeyPatch) -> DeployModule:
+    """Point deploy's module-level path constants at tmp_repo, with no git
+    repo involved. Use this for tests that don't need real fetch/merge."""
+    from scripts import deploy
+
+    monkeypatch.setattr(deploy, "REPO_ROOT", tmp_repo)
+    monkeypatch.setattr(deploy, "SERVICES_DIR", tmp_repo / "services")
+    monkeypatch.setattr(deploy, "BRANCH", "main")
+    monkeypatch.setattr(deploy, "LOCK_FILE", tmp_repo / "deploy.lock")
+    return deploy
+
+
+@dataclass
+class DeployRepo:
+    """A real `origin` repo plus a clone of it wired up as scripts.deploy's
+    REPO_ROOT. Tests commit new changes into `origin` to simulate upstream
+    pushes, then call `module.deploy(...)` on the `repo` clone."""
+
+    module: DeployModule
+    origin: Path
+    repo: Path
+
+
+@pytest.fixture
+def deploy_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> DeployRepo:
+    from scripts import deploy
+
+    origin = tmp_path / "origin"
+    init_git_repo(origin)
+    (origin / "services" / "shared" / "env").mkdir(parents=True)
+    (origin / "services" / "shared" / "env" / ".gitkeep").write_text("")
+    git_commit_all(origin, "init")
+
+    repo = tmp_path / "repo"
+    subprocess.run(["git", "clone", "-q", str(origin), str(repo)], check=True)
+    configure_git_identity(repo)
+
+    monkeypatch.setattr(deploy, "REPO_ROOT", repo)
+    monkeypatch.setattr(deploy, "SERVICES_DIR", repo / "services")
+    monkeypatch.setattr(deploy, "BRANCH", "main")
+    monkeypatch.setattr(deploy, "LOCK_FILE", tmp_path / "deploy.lock")
+    # Deploy's own decrypt step is out of scope here and must never touch
+    # the real repo's secrets; tests that care about it override this.
+    monkeypatch.setattr(deploy.decrypt_secrets, "main", lambda argv: 0)
+
+    return DeployRepo(module=deploy, origin=origin, repo=repo)
 
 
 @pytest.fixture
