@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Push edits made to a local .env back into its encrypted secret.sops.env.
 
   - Key already exists in the service's own secret.sops.env:
@@ -19,16 +18,16 @@ To add or edit an actually-shared key, use --shared.
 It decrypts and re-encrypts services/shared/env/secret.sops.env
 directly with none of the per-service shadowing logic above.
 
-Usage:
+Usage (run from the repo root):
   export SOPS_AGE_KEY_FILE=/path/to/age.key
-  python scripts/decrypt_secrets.py --services <name>   # edit the .env it writes
-  python scripts/encrypt_secrets.py --services <name> [<name> ...]
-  python scripts/encrypt_secrets.py --all-services      # every service, not shared
+  python -m scripts.decrypt_secrets --services <name>   # edit the .env it writes
+  python -m scripts.encrypt_secrets --services <name> [<name> ...]
+  python -m scripts.encrypt_secrets --all-services      # every service, not shared
 
-  python scripts/decrypt_secrets.py --shared            # edit services/shared/env/.env
-  python scripts/encrypt_secrets.py --shared            # write back
+  python -m scripts.decrypt_secrets --shared            # edit services/shared/env/.env
+  python -m scripts.encrypt_secrets --shared            # write back
 
-  python scripts/encrypt_secrets.py --all               # every service including shared
+  python -m scripts.encrypt_secrets --all               # every service including shared
 """
 
 from __future__ import annotations
@@ -37,7 +36,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from sops_common import (
+from .sops_common import (
     SopsError,
     decrypt_dotenv,
     is_encrypted_dotenv,

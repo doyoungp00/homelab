@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Decrypt secret.sops.env files to individual .env files docker-compose needs.
 
 For each target service directory:
@@ -7,13 +6,13 @@ For each target service directory:
   (in order, later key overrides colliding key)
 and writes the merged plaintext to <service>/.env (mode 600, gitignored).
 
-Usage:
+Usage (run from the repo root):
   export SOPS_AGE_KEY_FILE=/path/to/age.key
-  python scripts/decrypt_secrets.py --services <name> [<name> ...]
-  python scripts/decrypt_secrets.py --all-services  # every service excluding shared
-  python scripts/decrypt_secrets.py --shared
+  python -m scripts.decrypt_secrets --services <name> [<name> ...]
+  python -m scripts.decrypt_secrets --all-services  # every service excluding shared
+  python -m scripts.decrypt_secrets --shared
     # Decrypts `services/shared/env/secret.sops.env` to `services/shared/env/.env`
-  python scripts/decrypt_secrets.py --all           # every service including shared
+  python -m scripts.decrypt_secrets --all           # every service including shared
 """
 
 from __future__ import annotations
@@ -23,7 +22,7 @@ import os
 import sys
 from pathlib import Path
 
-from sops_common import SopsError, decrypt_dotenv, is_encrypted_dotenv
+from .sops_common import SopsError, decrypt_dotenv, is_encrypted_dotenv
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SERVICES_DIR = REPO_ROOT / "services"
