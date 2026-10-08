@@ -1,0 +1,22 @@
+---
+services:
+  deploy-agent:
+    build: .
+    container_name: deploy-agent
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      - REPO_URL=https://github.com/doyoungp00/homelab.git
+      - BRANCH=main
+      - POLL_INTERVAL_SECONDS=900
+      - SOPS_AGE_KEY_FILE=/run/secrets/age.key
+    ports:
+      - "9000:9000"
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/deploy-agent/repo:/repo
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/deploy-agent/age.key:/run/secrets/age.key:ro
