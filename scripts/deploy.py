@@ -96,6 +96,23 @@ def prune_images() -> None:
     subprocess.run(["docker", "image", "prune", "-f"], check=False, capture_output=True)
 
 
+def ensure_network(name: str) -> None:
+    """Create the shared docker network `name` if it doesn't already exist.
+
+    Services declare this network as `external: true`, so its lifecycle is
+    independent of any single service's compose project — nothing should
+    delete it just because e.g. traefik's stack gets torn down. Idempotent:
+    safe to call on every deploy regardless of which services actually
+    changed, or which order they get applied in.
+    """
+    exists = subprocess.run(
+        ["docker", "network", "inspect", name], capture_output=True
+    )
+    if exists.returncode != 0:
+        log(f"creating shared network {name}")
+        subprocess.run(["docker", "network", "create", name], check=True)
+
+
 def all_service_dirs() -> list[Path]:
     return sorted(
         p
@@ -124,6 +141,8 @@ def deploy(force: bool) -> int:
     if rc != 0:
         log("decrypt failed, aborting")
         return rc
+
+    ensure_network("proxy")
 
     failed = False
     for service_dir in all_service_dirs():

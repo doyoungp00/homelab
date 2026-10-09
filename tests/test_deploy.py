@@ -76,6 +76,42 @@ class TestApplyService:
         )
 
 
+class TestEnsureNetwork:
+    def test_does_nothing_when_network_already_exists(
+        self, deploy_paths: DeployModule, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[list[str]] = []
+
+        def fake_run(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+            calls.append(args)
+            return subprocess.CompletedProcess(args, 0)
+
+        monkeypatch.setattr(deploy_paths.subprocess, "run", fake_run)
+
+        deploy_paths.ensure_network("proxy")
+
+        assert calls == [["docker", "network", "inspect", "proxy"]]
+
+    def test_creates_network_when_missing(
+        self, deploy_paths: DeployModule, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[list[str]] = []
+
+        def fake_run(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+            calls.append(args)
+            returncode = 1 if args[:3] == ["docker", "network", "inspect"] else 0
+            return subprocess.CompletedProcess(args, returncode)
+
+        monkeypatch.setattr(deploy_paths.subprocess, "run", fake_run)
+
+        deploy_paths.ensure_network("proxy")
+
+        assert calls == [
+            ["docker", "network", "inspect", "proxy"],
+            ["docker", "network", "create", "proxy"],
+        ]
+
+
 class TestChangedServiceNames:
     def test_empty_when_local_equals_remote(self, deploy_repo: DeployRepo) -> None:
         module = deploy_repo.module
@@ -113,6 +149,7 @@ class TestDeploy:
             lambda service_dir: applied.append(service_dir.name),
         )
         monkeypatch.setattr(deploy_repo.module, "prune_images", lambda: None)
+        monkeypatch.setattr(deploy_repo.module, "ensure_network", lambda name: None)
         return applied
 
     def test_bootstraps_newly_added_services(
