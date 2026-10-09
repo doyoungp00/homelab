@@ -1,0 +1,38 @@
+---
+services:
+  homepage:
+    container_name: homepage
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      HOMEPAGE_ALLOWED_HOSTS: dash.${DOMAIN_LOCAL}
+    image: ghcr.io/gethomepage/homepage:latest
+    networks:
+      - proxy
+    # ports:
+    #   - "3000:3000"
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/homepage/config:/app/config
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/homepage/images:/app/public/images
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.homepage.rule=Host(`dash.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.homepage.tls=true
+      - traefik.http.routers.homepage.tls.certresolver=cloudflare
+      - traefik.http.services.homepage.loadbalancer.server.port=3000
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Homepage
+      - gatus.group=Infra
+      - "gatus.url=http://homepage:3000"
+      - gatus.interval=5m
+      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+
+networks:
+  proxy:
+    external: true
