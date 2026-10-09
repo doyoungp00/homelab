@@ -4,15 +4,31 @@ services:
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.asdefault=true"
+      - "--entrypoints.websecure.http.tls.certresolver=cloudflare"
+      - "--certificatesresolvers.cloudflare.acme.dnschallenge=true"
+      - "--certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare"
+      - "--certificatesresolvers.cloudflare.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.cloudflare.acme.storage=/etc/traefik/acme.json"
+    env_file:
+      - path: .env
+        required: false
     image: traefik:v3.7
     networks:
       - proxy
     ports:
       - "80:80"
+      - "443:443"
       - "8080:8080"
+    restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${MNT_APPDATA}/traefik/acme.json:/etc/traefik/acme.json
 
 networks:
   proxy:
