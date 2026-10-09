@@ -70,6 +70,7 @@ class TestApplyService:
                 "-d",
                 "--remove-orphans",
                 "--build",
+                "--force-recreate",
             ],
             True,
             deploy_paths.REPO_ROOT,

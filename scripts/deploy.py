@@ -86,6 +86,7 @@ def apply_service(service_dir: Path) -> None:
             "-d",
             "--remove-orphans",
             "--build",
+            "--force-recreate",
         ],
         cwd=REPO_ROOT,
         check=True,

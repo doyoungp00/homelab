@@ -70,5 +70,11 @@ curl -X POST -H "X-Deploy-Secret: <value>" http://<truenas-host>:9000/deploy
 
 ```bash
 sudo MNT_APPDATA=/mnt/<pool>/appdata DOCKER_CONFIG=/mnt/<pool>/appdata/deploy-agent/.docker \
-  docker compose -f services/deploy-agent/compose.yaml --project-directory services/deploy-agent up -d --build
+  docker compose -f services/deploy-agent/compose.yaml --project-directory services/deploy-agent up -d --build --force-recreate
 ```
+
+`--force-recreate` matters here: `docker compose up` decides whether to recreate a container by
+hashing the resolved compose config, not by checking whether a rebuilt image's digest actually
+changed. Since `compose.yaml` itself rarely changes between `agent.py` edits, `--build` alone can
+produce a new image that `up` then leaves completely unused, silently keeping the old container
+running on the old code.
