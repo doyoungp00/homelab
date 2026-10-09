@@ -5,7 +5,6 @@ services:
     env_file:
       - path: .env
         required: false
-      - path: ../shared/env/base.env
     image: ghcr.io/twin/gatus:latest
     networks:
       - proxy
