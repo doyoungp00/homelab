@@ -1,0 +1,53 @@
+---
+services:
+  gatus:
+    container_name: gatus
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    image: ghcr.io/twin/gatus:latest
+    networks:
+      - proxy
+    # ports:
+    #   - "8080:8080"
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/gatus/config:/config:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/gatus/data:/data
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.gatus.rule=Host(`gatus.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.gatus.tls=true
+      - traefik.http.routers.gatus.tls.certresolver=cloudflare
+      - traefik.http.services.gatus.loadbalancer.server.port=8080
+      # Homepage
+      - homepage.group=Infra
+      - homepage.name=Gatus
+      - homepage.icon=gatus.png
+      - "homepage.href=https://gatus.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Local services health & uptime dashboard
+      - homepage.widget.type=gatus
+      - "homepage.widget.url=http://gatus:8080"
+      - homepage.widget.highlight.down.numeric[0].level=danger
+      - homepage.widget.highlight.down.numeric[0].when=gt
+      - homepage.widget.highlight.down.numeric[0].value=0
+      - homepage.widget.highlight.uptime.numeric[0].level=warn
+      - homepage.widget.highlight.uptime.numeric[0].when=lt
+      - homepage.widget.highlight.uptime.numeric[0].value=100
+
+  gatus-generator:
+    build: .
+    container_name: gatus-generator
+    environment:
+      - GENERATE_INTERVAL_SECONDS=30
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/gatus/config:/config
+
+networks:
+  proxy:
+    external: true
