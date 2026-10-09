@@ -1,0 +1,200 @@
+---
+services:
+  bazarr:
+    container_name: bazarr
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    image: lscr.io/linuxserver/bazarr:latest
+    networks:
+      - proxy
+    # ports:
+    #   - 6767:6767
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/arr-stack/bazarr-config:/config
+      - ${PATH_MOVIES:?PATH_MOVIES not set}:/data/movies
+      - ${PATH_TV_SERIES:?PATH_TV_SERIES not set}:/data/tv
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.bazarr.rule=Host(`bazarr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.bazarr.tls=true
+      - traefik.http.routers.bazarr.tls.certresolver=cloudflare
+      - traefik.http.services.bazarr.loadbalancer.server.port=6767
+      # Homepage
+      - homepage.group=Downloads
+      - homepage.name=Bazarr
+      - homepage.icon=bazarr.png
+      - "homepage.href=https://bazarr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Fetch and manage subtitles
+      - homepage.widget.type=bazarr
+      - "homepage.widget.url=http://bazarr:6767"
+      - homepage.widget.key=${BAZARR_HOMEPAGE_KEY:?BAZARR_HOMEPAGE_KEY not set}
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Bazarr
+      - "gatus.group=arr Stack"
+      - "gatus.url=http://bazarr:6767"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+
+  flaresolverr:
+    container_name: flaresolverr
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_HTML=${LOG_HTML:-false}
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    networks:
+      - proxy
+    # ports:
+    #   - "8191:8191"
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.flaresolverr.rule=Host(`flaresolverr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.flaresolverr.tls=true
+      - traefik.http.routers.flaresolverr.tls.certresolver=cloudflare
+      - traefik.http.services.flaresolverr.loadbalancer.server.port=8191
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Flaresolverr
+      - "gatus.group=arr Stack"
+      - "gatus.url=http://flaresolverr:8191"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+
+  prowlarr:
+    container_name: prowlarr
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    image: lscr.io/linuxserver/prowlarr:latest
+    networks:
+      - proxy
+    # ports:
+    #   - "9696:9696"
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/arr-stack/prowlarr-config:/config
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.prowlarr.tls=true
+      - traefik.http.routers.prowlarr.tls.certresolver=cloudflare
+      - traefik.http.services.prowlarr.loadbalancer.server.port=9696
+      # Homepage
+      - homepage.group=Downloads
+      - homepage.name=Prowlarr
+      - homepage.icon=prowlarr.png
+      - "homepage.href=https://prowlarr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Manage indexers
+      - homepage.widget.type=prowlarr
+      - "homepage.widget.url=http://prowlarr:9696"
+      - homepage.widget.key=${PROWLARR_HOMEPAGE_KEY:?PROWLARR_HOMEPAGE_KEY not set}
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Prowlarr
+      - "gatus.group=arr Stack"
+      - "gatus.url=http://prowlarr:9696"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+
+  radarr:
+    container_name: radarr
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    image: lscr.io/linuxserver/radarr:latest
+    networks:
+      - proxy
+    # ports:
+    #   - "7878:7878"
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/arr-stack/radarr-config:/config
+      - ${MNT_TORRENT:?MNT_TORRENT not set}:/downloads # Radarr wants the download paths to match qBittorrent's reported one, e.g. /downloads
+      - ${PATH_MOVIES:?PATH_MOVIES not set}:/data/movies
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.radarr.rule=Host(`radarr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.radarr.tls=true
+      - traefik.http.routers.radarr.tls.certresolver=cloudflare
+      - traefik.http.services.radarr.loadbalancer.server.port=7878
+      # Homepage
+      - homepage.group=Downloads
+      - homepage.name=Radarr
+      - homepage.icon=radarr.png
+      - "homepage.href=https://radarr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Fetch and manage movies
+      - homepage.widget.type=radarr
+      - "homepage.widget.url=http://radarr:7878"
+      - homepage.widget.key=${RADARR_HOMEPAGE_KEY:?RADARR_HOMEPAGE_KEY not set}
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Radarr
+      - "gatus.group=arr Stack"
+      - "gatus.url=http://radarr:7878"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+
+  sonarr:
+    container_name: sonarr
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    image: lscr.io/linuxserver/sonarr:latest
+    networks:
+      - proxy
+    # ports:
+    #   - 8989:8989
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/arr-stack/sonarr-config:/config
+      - ${MNT_TORRENT:?MNT_TORRENT not set}:/downloads # Sonarr wants the download paths to match qBittorrent's reported one, e.g. /downloads
+      - ${PATH_TV_SERIES:?PATH_TV_SERIES not set}:/data/tv
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.sonarr.tls=true
+      - traefik.http.routers.sonarr.tls.certresolver=cloudflare
+      - traefik.http.services.sonarr.loadbalancer.server.port=8989
+      # Homepage
+      - homepage.group=Downloads
+      - homepage.name=Sonarr
+      - homepage.icon=sonarr.png
+      - "homepage.href=https://sonarr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Fetch and manage TV series
+      - homepage.widget.type=sonarr
+      - "homepage.widget.url=http://sonarr:8989"
+      - homepage.widget.key=${SONARR_HOMEPAGE_KEY:?SONARR_HOMEPAGE_KEY not set}
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Sonarr
+      - "gatus.group=arr Stack"
+      - "gatus.url=http://sonarr:8989"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+
+networks:
+  proxy:
+    external: true
