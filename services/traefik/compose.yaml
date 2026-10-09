@@ -1,6 +1,7 @@
 ---
 services:
   traefik:
+    container_name: traefik
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
@@ -24,11 +25,34 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"
+      # - "8080:8080"
     restart: unless-stopped
     volumes:
+      - /etc/localtime:/etc/localtime:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${MNT_APPDATA}/traefik/acme.json:/etc/traefik/acme.json
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/traefik/acme.json:/etc/traefik/acme.json
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.traefik.tls=true
+      - traefik.http.routers.traefik.tls.certresolver=cloudflare
+      - traefik.http.routers.traefik.service=api@internal
+      # Homepage
+      - homepage.group=Infra
+      - homepage.name=Traefik
+      - homepage.icon=traefik.png
+      - "homepage.href=https://traefik.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Web server and reverse proxy
+      - homepage.widget.type=traefik
+      - "homepage.widget.url=http://traefik:8080"
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Traefik Web UI
+      - gatus.group=Infra
+      - "gatus.url=http://traefik:8080"
+      - gatus.interval=1m
+      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
 
 networks:
   proxy:
