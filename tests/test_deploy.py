@@ -39,6 +39,15 @@ class TestAllServiceDirs:
     def test_empty_when_no_services(self, deploy_paths: DeployModule) -> None:
         assert deploy_paths.all_service_dirs() == []
 
+    def test_excludes_deploy_agent_itself(self, deploy_paths: DeployModule) -> None:
+        for name in ["alpha", "deploy-agent"]:
+            (deploy_paths.SERVICES_DIR / name).mkdir(parents=True, exist_ok=True)
+            (deploy_paths.SERVICES_DIR / name / "compose.yaml").write_text("")
+
+        names = [p.name for p in deploy_paths.all_service_dirs()]
+
+        assert names == ["alpha"]
+
 
 class TestApplyService:
     def test_runs_pull_then_up_with_expected_args(

@@ -114,11 +114,23 @@ def ensure_network(name: str) -> None:
         subprocess.run(["docker", "network", "create", name], check=True)
 
 
+SELF_SERVICE_NAME = "deploy-agent"
+
+
 def all_service_dirs() -> list[Path]:
+    """Every service deploy.py manages — excluding `shared` (not deployable)
+    and deploy-agent itself. Self-recreating from inside its own running
+    process is unsafe: docker compose's recreate is several separate
+    client-issued calls, and killing the client mid-sequence (which
+    self-recreation does, by definition) can leave a half-finished
+    container with nothing left alive to complete it. Update deploy-agent
+    by hand instead."""
     return sorted(
         p
         for p in SERVICES_DIR.iterdir()
-        if p.is_dir() and p.name != "shared" and (p / "compose.yaml").is_file()
+        if p.is_dir()
+        and p.name not in ("shared", SELF_SERVICE_NAME)
+        and (p / "compose.yaml").is_file()
     )
 
 
