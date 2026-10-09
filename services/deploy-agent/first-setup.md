@@ -9,18 +9,45 @@ chmod 600 age.key
 
 # 2. Decrypt `WEBHOOK_SECRET` to plaintext, once, by hand
 
+TrueNAS SCALE's host OS has a read-only root filesystem — you can't `curl`/install `sops`
+onto the bare host. Run the decrypt inside a throwaway container built from the `deploy-agent` image
+instead, which already bakes in `sops`. `docker compose run` reuses the same `/repo` and
+`age.key` volume mounts already defined in `compose.yaml`, so nothing extra needs wiring up.
+
 ```bash
 cd /mnt/<pool>/appdata/deploy-agent/repo
-export SOPS_AGE_KEY_FILE=/mnt/<pool>/appdata/deploy-agent/age.key
-python -m scripts.decrypt_secrets --services deploy-agent
+
+sudo MNT_APPDATA=/mnt/<pool>/appdata DOCKER_CONFIG=/mnt/<pool>/appdata/deploy-agent/.docker \
+  docker compose -f services/deploy-agent/compose.yaml --project-directory services/deploy-agent build
+
+sudo MNT_APPDATA=/mnt/<pool>/appdata DOCKER_CONFIG=/mnt/<pool>/appdata/deploy-agent/.docker \
+  docker compose -f services/deploy-agent/compose.yaml --project-directory services/deploy-agent \
+  run --rm --entrypoint python3 --workdir /repo deploy-agent \
+  -m scripts.decrypt_secrets --services deploy-agent
 ```
 
-To rotate the secret instead of just bootstrapping it:
+`--entrypoint python3` overrides the image's default (which normally launches `agent.py`),
+and `--workdir /repo` makes `scripts` resolve as a package the same way it does everywhere
+else in this repo. Every `docker compose` invocation in this file needs the same
+`sudo MNT_APPDATA=... DOCKER_CONFIG=...` prefix — each `sudo` call is a fresh process that
+won't see a plain `export` from earlier in the session.
+
+To rotate the secret instead of just bootstrapping it, same idea — decrypt, edit, re-encrypt,
+all inside the same throwaway container:
 
 ```bash
-python -m scripts.decrypt_secrets --services deploy-agent   # writes .env
+sudo MNT_APPDATA=/mnt/<pool>/appdata DOCKER_CONFIG=/mnt/<pool>/appdata/deploy-agent/.docker \
+  docker compose -f services/deploy-agent/compose.yaml --project-directory services/deploy-agent \
+  run --rm --entrypoint python3 --workdir /repo deploy-agent \
+  -m scripts.decrypt_secrets --services deploy-agent   # writes .env
+
 echo "WEBHOOK_SECRET=$(openssl rand -hex 24)" > services/deploy-agent/.env
-python -m scripts.encrypt_secrets --services deploy-agent   # writes secret.sops.env back
+
+sudo MNT_APPDATA=/mnt/<pool>/appdata DOCKER_CONFIG=/mnt/<pool>/appdata/deploy-agent/.docker \
+  docker compose -f services/deploy-agent/compose.yaml --project-directory services/deploy-agent \
+  run --rm --entrypoint python3 --workdir /repo deploy-agent \
+  -m scripts.encrypt_secrets --services deploy-agent   # writes secret.sops.env back
+
 git add services/deploy-agent/secret.sops.env
 git commit -m "rotate deploy-agent webhook secret" && git push
 ```
@@ -42,5 +69,6 @@ curl -X POST -H "X-Deploy-Secret: <value>" http://<truenas-host>:9000/deploy
 # 3. Launch
 
 ```bash
-docker compose -f services/deploy-agent/compose.yaml --project-directory services/deploy-agent up -d --build
+sudo MNT_APPDATA=/mnt/<pool>/appdata DOCKER_CONFIG=/mnt/<pool>/appdata/deploy-agent/.docker \
+  docker compose -f services/deploy-agent/compose.yaml --project-directory services/deploy-agent up -d --build
 ```

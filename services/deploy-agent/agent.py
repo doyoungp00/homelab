@@ -32,13 +32,15 @@ def log(message: str) -> None:
 
 
 def ensure_clone() -> None:
-    if (REPO_DIR / ".git").is_dir():
-        return
-    log(f"cloning {REPO_URL} into {REPO_DIR}")
-    REPO_DIR.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        ["git", "clone", "--branch", BRANCH, REPO_URL, str(REPO_DIR)], check=True
-    )
+    if not (REPO_DIR / ".git").is_dir():
+        log(f"cloning {REPO_URL} into {REPO_DIR}")
+        REPO_DIR.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(
+            ["git", "clone", "--branch", BRANCH, REPO_URL, str(REPO_DIR)], check=True
+        )
+    # Also needed when /repo was pre-cloned on the host (per first-setup.md)
+    # rather than by this function — git flags ownership as "dubious" whenever
+    # the container's UID doesn't match the files', regardless of who cloned it.
     subprocess.run(
         ["git", "config", "--global", "--add", "safe.directory", str(REPO_DIR)],
         check=True,
