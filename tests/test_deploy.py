@@ -50,7 +50,7 @@ class TestAllServiceDirs:
 
 
 class TestApplyService:
-    def test_runs_pull_then_up_with_expected_args(
+    def test_image_based_service_is_not_force_recreated(
         self, deploy_paths: DeployModule, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         calls: list[tuple[list[str], bool | None, Path | None]] = []
@@ -61,6 +61,7 @@ class TestApplyService:
         monkeypatch.setattr(deploy_paths.subprocess, "run", fake_run)
         service_dir = deploy_paths.SERVICES_DIR / "svc"
         service_dir.mkdir(parents=True)
+        (service_dir / "compose.yaml").write_text("services:\n  svc:\n    image: foo:latest\n")
 
         deploy_paths.apply_service(service_dir)
 
@@ -69,6 +70,36 @@ class TestApplyService:
             False,
             None,
         )
+        assert calls[1] == (
+            [
+                "docker",
+                "compose",
+                "--project-directory",
+                str(service_dir),
+                "up",
+                "-d",
+                "--remove-orphans",
+                "--build",
+            ],
+            True,
+            deploy_paths.REPO_ROOT,
+        )
+
+    def test_build_based_service_is_force_recreated(
+        self, deploy_paths: DeployModule, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[tuple[list[str], bool | None, Path | None]] = []
+
+        def fake_run(args: list[str], **kwargs: object) -> None:
+            calls.append((args, kwargs.get("check"), kwargs.get("cwd")))
+
+        monkeypatch.setattr(deploy_paths.subprocess, "run", fake_run)
+        service_dir = deploy_paths.SERVICES_DIR / "svc"
+        service_dir.mkdir(parents=True)
+        (service_dir / "compose.yaml").write_text("services:\n  svc:\n    build: .\n")
+
+        deploy_paths.apply_service(service_dir)
+
         assert calls[1] == (
             [
                 "docker",

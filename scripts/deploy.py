@@ -76,6 +76,17 @@ def apply_service(service_dir: Path) -> None:
         ],
         check=False,
     )
+    # docker compose up decides whether to recreate a container by hashing the
+    # resolved compose config, not by checking whether a rebuilt image's digest
+    # changed — so a `build:` service can get a new image that `up` then leaves
+    # completely unused. --force-recreate fixes that, but applying it to every
+    # service (including plain `image:` ones with no such blind spot) would
+    # restart every stable service on every initial-reconcile boot for no
+    # reason. Scope it to only the services that actually need it.
+    has_build = "build:" in (service_dir / "compose.yaml").read_text()
+    up_args = ["--remove-orphans", "--build"]
+    if has_build:
+        up_args.append("--force-recreate")
     subprocess.run(
         [
             "docker",
@@ -84,9 +95,7 @@ def apply_service(service_dir: Path) -> None:
             str(service_dir),
             "up",
             "-d",
-            "--remove-orphans",
-            "--build",
-            "--force-recreate",
+            *up_args,
         ],
         cwd=REPO_ROOT,
         check=True,
