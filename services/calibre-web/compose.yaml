@@ -1,18 +1,49 @@
+---
 services:
   calibre-web:
-    image: lscr.io/linuxserver/calibre-web:latest
     container_name: calibre-web
-    restart: unless-stopped
-    ports:
-      - "${PORT:?PORT not set}:8083"
     env_file:
-      - path: .env # Decrypted from secret.sops.env
+      - path: .env
         required: false
       - path: ../shared/env/base.env
     environment:
       # Include Calibre's ebook-convert binary (x64 only)
       - DOCKER_MODS=linuxserver/mods:universal-calibre
+    image: lscr.io/linuxserver/calibre-web:latest
+    networks:
+      - proxy
+    # ports:
+    #   - "8083:8083"
+    restart: unless-stopped
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${MNT_APPDATA:?MNT_APPDATA not set}/calibre-web/config:/config
-      - ${BOOKS_DIR:?BOOKS_DIR not set}:/books
+      - ${PATH_BOOKS:?PATH_BOOKS not set}:/books
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.calibre-web.rule=Host(`calibre.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.calibre-web.tls=true
+      - traefik.http.routers.calibre-web.tls.certresolver=cloudflare
+      - traefik.http.services.calibre-web.loadbalancer.server.port=8083
+      # Homepage
+      - homepage.group=Media
+      - homepage.name=Calibre Web
+      - homepage.icon=calibre-web.png
+      - "homepage.href=https://calibre.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Read and manage books
+      - homepage.widget.type=calibreweb
+      - "homepage.widget.url=http://calibre-web:8083"
+      - homepage.widget.username=${CALIBRE_WEB_USER:?CALIBRE_WEB_USER not set}
+      - homepage.widget.password=${CALIBRE_WEB_PASS:?CALIBRE_WEB_PASS not set}
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Calibre Web
+      - gatus.group=Media
+      - "gatus.url=http://calibre-web:8083/ping"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+
+networks:
+  proxy:
+    external: true
