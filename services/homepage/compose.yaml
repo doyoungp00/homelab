@@ -31,7 +31,7 @@ services:
       - gatus.group=Infra
       - "gatus.url=http://homepage:3000"
       - gatus.interval=5m
-      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+      - 'gatus.conditions=["[STATUS] == 200"]'
 
 networks:
   proxy:
