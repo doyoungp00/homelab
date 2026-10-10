@@ -11,12 +11,12 @@ services:
     image: ghcr.io/blakeblackshear/frigate:stable
     networks:
       - proxy
-    ports:
-      - "5000:5000" # Unauthenticated UI/API - published so browsers can reach the MJPEG debug widget directly
-      # - "8971:8971" # Authenticated web UI + API
-      # - "8554:8554" # RTSP restream (go2rtc)
-      # - "8555:8555/tcp" # WebRTC over TCP
-      # - "8555:8555/udp" # WebRTC over UDP
+    # ports:
+    #   - "5000:5000" # Unauthenticated UI/API
+    #   - "8971:8971" # Authenticated web UI + API
+    # - "8554:8554" # RTSP restream (go2rtc)
+    # - "8555:8555/tcp" # WebRTC over TCP
+    # - "8555:8555/udp" # WebRTC over UDP
     # privileged: true # Only needed for some hardware setups; try without first
     restart: unless-stopped
     shm_size: 256mb
@@ -40,6 +40,13 @@ services:
       - traefik.http.routers.frigate.tls=true
       - traefik.http.routers.frigate.tls.certresolver=cloudflare
       - traefik.http.services.frigate.loadbalancer.server.port=8971
+      # Debug MJPEG endpoint (port 5000, unauthenticated)
+      # Gives it a real TLS'd hostname instead of a raw host IP:port, which
+      # browsers auto-upgrade/block as mixed content on an HTTPS dashboard.
+      - traefik.http.routers.frigate-stream.rule=Host(`frigate-stream.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.frigate-stream.tls=true
+      - traefik.http.routers.frigate-stream.tls.certresolver=cloudflare
+      - traefik.http.services.frigate-stream.loadbalancer.server.port=5000
       # Homepage
       - homepage.group=Surveillance
       - homepage.name=Frigate NVR
