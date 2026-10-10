@@ -16,7 +16,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${MNT_CLOUD:?MNT_CLOUD not set}:${PATH_CLOUD_SRV:?PATH_CLOUD_SRV not set}
-      - ${MNT_HARDPOINT:?MNT_HARDPOINT not set}:${PATH_HARDPOINT_SRV:?PATH_HARDPOINT_SRV not set}
+      - ${PATH_HARDPOINT:?PATH_HARDPOINT not set}:${PATH_HARDPOINT_SRV:?PATH_HARDPOINT_SRV not set}
       - ${MNT_MEDIA:?MNT_MEDIA not set}:${PATH_MEDIA_SRV:?PATH_MEDIA_SRV not set}
       - ${MNT_APPDATA:?MNT_APPDATA not set}:${PATH_APPDATA_SRV:?PATH_APPDATA_SRV not set}
       - ${MNT_TORRENT:?MNT_TORRENT not set}:${PATH_TORRENT_SRV:?PATH_TORRENT_SRV not set}
