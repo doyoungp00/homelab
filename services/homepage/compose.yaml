@@ -30,6 +30,7 @@ services:
       - gatus.name=Homepage
       - gatus.group=Infra
       - "gatus.url=http://homepage:3000"
+      - "gatus.headers.Host=dash.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
       - gatus.interval=5m
       - 'gatus.conditions=["[STATUS] == 200"]'
 
