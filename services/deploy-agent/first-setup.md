@@ -60,10 +60,17 @@ It authenticates the manual-trigger endpoint in [agent.py](agent.py)'s `Handler.
 LAN-only with no TLS, so this header is the only thing stopping another device on the LAN from
 forcing a redeploy — it gates _who can trigger_, not any data in transit.
 
-To trigger a deploy manually:
+To trigger a deploy manually (force-recreates every service):
 
 ```bash
 curl -X POST -H "X-Deploy-Secret: <value>" http://<truenas-host>:9000/deploy
+```
+
+To instead only apply services whose directory actually changed (same targeted
+behavior as a poll tick), add `?force=false`:
+
+```bash
+curl -X POST -H "X-Deploy-Secret: <value>" "http://<truenas-host>:9000/deploy?force=false"
 ```
 
 # 3. Launch

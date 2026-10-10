@@ -6,6 +6,9 @@ startup, then for the life of the container:
     POLL_INTERVAL_SECONDS, picking up new commits on BRANCH
   - an HTTP server on PORT takes an immediate, LAN-only manual trigger:
       curl -X POST -H "X-Deploy-Secret: $WEBHOOK_SECRET" http://host:9000/deploy
+    Defaults to force-recreating every service. Add ?force=false to instead
+    only apply services whose directory actually changed, same as a poll tick:
+      curl -X POST -H "X-Deploy-Secret: $WEBHOOK_SECRET" "http://host:9000/deploy?force=false"
 """
 
 from __future__ import annotations
@@ -16,6 +19,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 REPO_DIR = Path(os.environ.get("REPO_DIR", "/repo"))
 REPO_URL = os.environ["REPO_URL"]
@@ -68,7 +72,8 @@ def poll_loop() -> None:
 
 class Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
-        if self.path != "/deploy":
+        parsed = urlparse(self.path)
+        if parsed.path != "/deploy":
             self.send_response(404)
             self.end_headers()
             return
@@ -76,10 +81,15 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(401)
             self.end_headers()
             return
-        threading.Thread(target=run_deploy, kwargs={"force": True}, daemon=True).start()
+        # Defaults to force (recreate everything) to match how this endpoint
+        # has always behaved; ?force=false opts into the targeted, diff-only
+        # behavior the poll loop uses instead.
+        raw_force = parse_qs(parsed.query).get("force", ["true"])[0]
+        force = raw_force.lower() not in ("false", "0", "no")
+        threading.Thread(target=run_deploy, kwargs={"force": force}, daemon=True).start()
         self.send_response(202)
         self.end_headers()
-        self.wfile.write(b"deploy triggered\n")
+        self.wfile.write(f"deploy triggered (force={force})\n".encode())
 
     def log_message(self, fmt: str, *args) -> None:
         log(fmt % args)
