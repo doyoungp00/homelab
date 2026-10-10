@@ -28,9 +28,9 @@ services:
     read_only: true
     privileged: false
     # Uncomment next line for SATA or NVME smartctl monitoring
-    # cap_add:
-    #   Uncomment next line for SATA smartctl monitoring
-    #   - SYS_RAWIO
+    cap_add:
+      #   Uncomment next line for SATA smartctl monitoring
+      - SYS_RAWIO
     #   Uncomment next line for NVME smartctl monitoring
     #   - SYS_ADMIN
     # devices:
