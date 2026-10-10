@@ -18,8 +18,8 @@ services:
     restart: unless-stopped
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - ${MNT_APPDATA:?MNT_APPDATA not set}/work:/opt/adguardhome/work
-      - ${MNT_APPDATA:?MNT_APPDATA not set}/conf:/opt/adguardhome/conf
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/adguardhome/work:/opt/adguardhome/work
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/adguardhome/conf:/opt/adguardhome/conf
     labels:
       # Traefik
       - traefik.enable=true
