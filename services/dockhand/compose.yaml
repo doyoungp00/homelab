@@ -19,7 +19,7 @@ services:
     labels:
       # Traefik
       - traefik.enable=true
-      - traefik.http.routers.dockhand.rule=Host(`calibre.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.dockhand.rule=Host(`dockhand.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.dockhand.tls=true
       - traefik.http.routers.dockhand.tls.certresolver=cloudflare
       - traefik.http.services.dockhand.loadbalancer.server.port=3000
