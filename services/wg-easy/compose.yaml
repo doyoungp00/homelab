@@ -61,6 +61,7 @@ services:
       - homepage.widget.type=wgeasy
       - "homepage.widget.url=http://wg-easy:51821"
       - homepage.widget.version=2
+      - homepage.widget.username=${INIT_USERNAME:?INIT_USERNAME not set}
       - homepage.widget.password=${INIT_PASSWORD:?INIT_PASSWORD not set}
       - 'homepage.widget.fields=["connected","enabled","total"]'
       # Gatus
