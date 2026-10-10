@@ -86,9 +86,6 @@ services:
       - homepage.icon=glances.png
       - "homepage.href=https://glances.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
       - homepage.description=System monitor
-      - homepage.widget.type=glances
-      - "homepage.widget.url=http://${HOST_IP:?HOST_IP not set}:61208"
-      - homepage.widget.version=4
       # Gatus
       - gatus.enable=true
       - gatus.name=Glances
