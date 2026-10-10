@@ -13,3 +13,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${MNT_APPDATA:?MNT_APPDATA not set}/ddclient/config:/config
+
+networks:
+  proxy:
+    external: true
