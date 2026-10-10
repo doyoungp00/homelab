@@ -54,7 +54,7 @@ services:
       - "homepage.href=https://frigate.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
       - homepage.description=Home surveillance
       - homepage.widget.type=frigate
-      - "homepage.widget.url=http://frigate"
+      - "homepage.widget.url=https://frigate.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
       - homepage.widget.username=${FRIGATE_USER:?FRIGATE_USER not set}
       - homepage.widget.password=${FRIGATE_PASS:?FRIGATE_PASS not set}
       # Gatus
