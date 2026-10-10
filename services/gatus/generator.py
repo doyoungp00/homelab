@@ -15,6 +15,9 @@ Label contract, per container:
   gatus.conditions=<json>         optional JSON array of condition strings,
                                    defaults to '["[STATUS] == 200"]'
   gatus.headers.<Header>=val      optional, any number of these become the endpoint's `headers:` map
+  gatus.dns.<key>=val             optional, any number of these become the endpoint's `dns:` map
+                                   (e.g. gatus.dns.query-name=, gatus.dns.query-type=) — for the
+                                   DNS endpoint type, key names passed through verbatim
 
 Docker labels are a flat key->value map, not a multi-map — a container that
 tunnels several logical services through itself (e.g. network_mode:
@@ -119,6 +122,14 @@ def endpoint_from_fields(
     }
     if headers:
         endpoint["headers"] = headers
+
+    dns = {
+        field[len("dns.") :]: value
+        for field, value in fields.items()
+        if field.startswith("dns.")
+    }
+    if dns:
+        endpoint["dns"] = dns
 
     return endpoint
 

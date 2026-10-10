@@ -1,0 +1,58 @@
+---
+services:
+  adguardhome:
+    container_name: adguardhome
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      - ADGUARD_HOME_DEFAULT_WEB_PORT=3000
+    image: adguard/adguardhome:latest
+    networks:
+      - proxy
+    ports:
+      - 53:53/tcp
+      - 53:53/udp
+      # - 3000:3000/tcp
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/work:/opt/adguardhome/work
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/conf:/opt/adguardhome/conf
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.adguardhome.rule=Host(`adguard.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.adguardhome.tls=true
+      - traefik.http.routers.adguardhome.tls.certresolver=cloudflare
+      - traefik.http.services.adguardhome.loadbalancer.server.port=3000
+      # Homepage
+      - homepage.group=Infra
+      - homepage.name=AdGuard Home
+      - homepage.icon=adguard-home.png
+      - "homepage.href=https://adguard.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Ad blocking local DNS
+      - homepage.widget.type=adguard
+      - "homepage.widget.url=http://adguardhome:3000"
+      - homepage.widget.username=${ADGUARD_HOMEPAGE_USER:?ADGUARD_HOMEPAGE_USER not set}
+      - homepage.widget.password=${ADGUARD_HOMEPAGE_PASS:?ADGUARD_HOMEPAGE_PASS not set}
+      - 'homepage.widget.fields=["queries","blocked","filtered"]'
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=AdGuard Web UI
+      - gatus.group=Infra
+      - "gatus.url=http://adguardhome:3000"
+      - gatus.interval=1m
+      - 'gatus.conditions=["[STATUS] < 400"]'
+      - gatus[1].name=AdGuard DNS
+      - gatus[1].group=Infra
+      - "gatus[1].url=${HOST_IP:?HOST_IP not set}"
+      - gatus[1].interval=1m
+      - gatus[1].dns.query-name=example.com
+      - gatus[1].dns.query-type=A
+      - 'gatus[1].conditions=["[DNS_RCODE] == NOERROR"]'
+
+networks:
+  proxy:
+    external: true
