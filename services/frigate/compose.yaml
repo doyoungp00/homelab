@@ -46,12 +46,10 @@ services:
       - homepage.icon=frigate.png
       - "homepage.href=https://frigate.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
       - homepage.description=Home surveillance
-      - homepage.widgets[0].type=frigate
-      - "homepage.widgets[0].url=http://frigate"
-      - homepage.widgets[0].username=${FRIGATE_USER:?FRIGATE_USER not set}
-      - homepage.widgets[0].password=${FRIGATE_PASS:?FRIGATE_PASS not set}
-      - homepage.widgets[1].type=mjpeg
-      - "homepage.widgets[1].stream=http://${HOST_IP:?HOST_IP not set}:5000/api/${FRIGATE_CAMERA_01_NAME:?FRIGATE_CAMERA_01_NAME not set}?fps=24&h=480"
+      - homepage.widget.type=frigate
+      - "homepage.widget.url=http://frigate"
+      - homepage.widget.username=${FRIGATE_USER:?FRIGATE_USER not set}
+      - homepage.widget.password=${FRIGATE_PASS:?FRIGATE_PASS not set}
       # Gatus
       - gatus.enable=true
       - gatus.name=Frigate NVR
