@@ -5,6 +5,7 @@ services:
     env_file:
       - path: .env
         required: false
+      - path: ../shared/env/base.env
     environment:
       # Include Calibre's ebook-convert binary (x64 only)
       - DOCKER_MODS=linuxserver/mods:universal-calibre
