@@ -1,0 +1,40 @@
+---
+services:
+  myspeed:
+    container_name: myspeed
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    image: germannewsmaker/myspeed:latest
+    networks:
+      - proxy
+    restart: unless-stopped
+    volumes:
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/myspeed/data:/myspeed/data
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.myspeed.rule=Host(`myspeed.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.myspeed.tls=true
+      - traefik.http.routers.myspeed.tls.certresolver=cloudflare
+      - traefik.http.services.myspeed.loadbalancer.server.port=5216
+      # Homepage
+      - homepage.group=Infra
+      - homepage.name=MySpeed
+      - homepage.icon=myspeed.png
+      - "homepage.href=https://myspeed.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Scheduled internet speed tests
+      - homepage.widget.type=myspeed
+      - "homepage.widget.url=http://myspeed:5216"
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=MySpeed
+      - gatus.group=Infra
+      - "gatus.url=http://myspeed:5216"
+      - gatus.interval=5m
+      - 'gatus.conditions=["[STATUS] == 200"]'
+
+networks:
+  proxy:
+    external: true
