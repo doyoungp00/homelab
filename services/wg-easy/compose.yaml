@@ -1,0 +1,84 @@
+---
+services:
+  wg-easy:
+    container_name: wg-easy
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+      # - NET_RAW # ⚠️ Uncomment if using Podman
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      - HOST=0.0.0.0
+      - WG_HOST=${WG_HOST:?WG_HOST not set}
+      - PORT=51821
+      - WG_PORT=51820
+      - INSECURE=true
+      - INIT_ENABLED=true
+      - INIT_USERNAME=${INIT_USERNAME:?INIT_USERNAME not set}
+      - INIT_PASSWORD=${INIT_PASSWORD:?INIT_PASSWORD not set}
+      - INIT_HOST=${WG_HOST:?WG_HOST not set}
+      - INIT_PORT=51820
+      - INIT_DNS=${HOST_IP:?HOST_IP not set}
+      - DISABLE_IPV6=true
+    image: ghcr.io/wg-easy/wg-easy:15
+    networks:
+      wg:
+        ipv4_address: 10.42.42.42
+        ipv6_address: fdcc:ad94:bacf:61a3::2a
+      proxy:
+    ports:
+      - 51820:51820/udp
+      # - "51821:51821" # Web UI now reached via Traefik instead
+    restart: unless-stopped
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.disable_ipv6=0
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv6.conf.default.forwarding=1
+    volumes:
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/wg-easy/etc:/etc/wireguard
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/wg-easy/lib_modules:/lib/modules:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/wg-easy/data:/data
+      # - etc_wireguard:
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.wg-easy.rule=Host(`wg-easy.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.wg-easy.tls=true
+      - traefik.http.routers.wg-easy.tls.certresolver=cloudflare
+      - traefik.http.services.wg-easy.loadbalancer.server.port=51821
+      # Homepage
+      - homepage.group=Infra
+      - homepage.name=wg-easy
+      - homepage.icon=wireguard.png
+      - "homepage.href=https://wg-easy.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=WireGuard VPN server
+      - homepage.widget.type=wgeasy
+      - "homepage.widget.url=http://wg-easy:51821"
+      - homepage.widget.version=2
+      - homepage.widget.password=${INIT_PASSWORD:?INIT_PASSWORD not set}
+      - 'homepage.widget.fields=["connected","enabled","total"]'
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=wg-easy
+      - gatus.group=Infra
+      - "gatus.url=http://wg-easy:51821"
+      - gatus.interval=5m
+      - 'gatus.conditions=["[STATUS] == 200"]'
+
+networks:
+  wg:
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 10.42.42.0/24
+        - subnet: fdcc:ad94:bacf:61a3::/64
+      driver: default
+  proxy:
+    external: true
