@@ -76,42 +76,25 @@ services:
 
   prowlarr:
     container_name: prowlarr
+    depends_on:
+      gluetun:
+        condition: service_healthy
     env_file:
       - path: .env
         required: false
       - path: ../shared/env/base.env
     image: lscr.io/linuxserver/prowlarr:latest
-    networks:
-      - proxy
+    # Routed through gluetun's VPN tunnel - shares its network namespace
+    # entirely, so no networks:/ports: of its own. Its Traefik/Homepage/Gatus
+    # labels live on gluetun below instead, since that's the container that
+    # actually has a usable IP for Traefik to discover.
+    network_mode: service:gluetun
     # ports:
     #   - "9696:9696"
     restart: unless-stopped
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${MNT_APPDATA:?MNT_APPDATA not set}/arr-stack/prowlarr-config:/config
-    labels:
-      # Traefik
-      - traefik.enable=true
-      - traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
-      - traefik.http.routers.prowlarr.tls=true
-      - traefik.http.routers.prowlarr.tls.certresolver=cloudflare
-      - traefik.http.services.prowlarr.loadbalancer.server.port=9696
-      # Homepage
-      - homepage.group=Downloads
-      - homepage.name=Prowlarr
-      - homepage.icon=prowlarr.png
-      - "homepage.href=https://prowlarr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
-      - homepage.description=Manage indexers
-      - homepage.widget.type=prowlarr
-      - "homepage.widget.url=http://prowlarr:9696"
-      - homepage.widget.key=${PROWLARR_HOMEPAGE_KEY:?PROWLARR_HOMEPAGE_KEY not set}
-      # Gatus
-      - gatus.enable=true
-      - gatus.name=Prowlarr
-      - "gatus.group=arr Stack"
-      - "gatus.url=http://prowlarr:9696"
-      - gatus.interval=10m
-      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
 
   radarr:
     container_name: radarr
@@ -194,6 +177,149 @@ services:
       - "gatus.url=http://sonarr:8989"
       - gatus.interval=10m
       - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+
+  gluetun:
+    cap_add:
+      - NET_ADMIN
+    container_name: gluetun
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      - VPN_SERVICE_PROVIDER=${GLUETUN_VPN_SERVICE_PROVIDER:?GLUETUN_VPN_SERVICE_PROVIDER not set}
+      - VPN_TYPE=wireguard
+      - SERVER_COUNTRIES=${GLUETUN_SERVER_COUNTRIES:?GLUETUN_SERVER_COUNTRIES not set}
+      - WIREGUARD_PRIVATE_KEY=${GLUETUN_WIREGUARD_PRIVATE_KEY:?GLUETUN_WIREGUARD_PRIVATE_KEY not set}
+      - WIREGUARD_ADDRESSES=10.2.0.2/32
+      - VPN_PORT_FORWARDING=on
+      - VPN_PORT_FORWARDING_PROVIDER=${GLUETUN_VPN_PORT_FORWARDING_PROVIDER:?GLUETUN_VPN_PORT_FORWARDING_PROVIDER not set}
+      - >-
+        VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh -c 'wget -O- -nv --retry-connrefused --post-data
+        "json={\"listen_port\":{{PORT}},\"current_network_interface\":\"{{VPN_INTERFACE}}\",\"random_port\":false,\"upnp\":false}"
+        http://127.0.0.1:8080/api/v2/app/setPreferences'
+      - >-
+        VPN_PORT_FORWARDING_DOWN_COMMAND=/bin/sh -c 'wget -O- -nv --retry-connrefused --post-data
+        "json={\"listen_port\":0,\"current_network_interface\":\"lo\"}"
+        http://127.0.0.1:8080/api/v2/app/setPreferences'
+      - UPDATER_PERIOD=24h
+    healthcheck:
+      interval: 10s
+      retries: 10
+      test:
+        - CMD
+        - wget
+        - "-q"
+        - "--spider"
+        - https://1.1.1.1
+      timeout: 5s
+    image: qmcgaw/gluetun
+    networks:
+      - proxy
+    # ports:
+    #   - "8080:8080" # qbittorrent WebUI
+    #   - "4567:4567" # suwayomi
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/gluetun:/gluetun
+    labels:
+      # Prowlarr's Traefik/Homepage/Gatus - physically on gluetun's labels
+      # since prowlarr (network_mode: service:gluetun) has no network
+      # identity of its own for Traefik to discover.
+      - traefik.enable=true
+      - traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.prowlarr.tls=true
+      - traefik.http.routers.prowlarr.tls.certresolver=cloudflare
+      - traefik.http.routers.prowlarr.service=prowlarr
+      - traefik.http.services.prowlarr.loadbalancer.server.port=9696
+      - homepage.group=Downloads
+      - homepage.name=Prowlarr
+      - homepage.icon=prowlarr.png
+      - "homepage.href=https://prowlarr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Manage indexers
+      - homepage.widget.type=prowlarr
+      - "homepage.widget.url=http://gluetun:9696"
+      - homepage.widget.key=${PROWLARR_HOMEPAGE_KEY:?PROWLARR_HOMEPAGE_KEY not set}
+      - gatus.enable=true
+      - gatus.name=Prowlarr
+      - "gatus.group=arr Stack"
+      - "gatus.url=http://gluetun:9696"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+      # qBittorrent Traefik/Gatus
+      # Defined on gluetun since it shares its network namespace.
+      # No homepage.* here: Homepage's label discovery maps one container to
+      # at most one card (an open, unimplemented upstream feature request),
+      # so a second card on this same container has to go in services.yaml
+      # instead.
+      # Gatus is indexed (gatus[1].*) rather than flat, and supports
+      # multiple entries per container, unlike Homepage.
+      - traefik.http.routers.qbittorrent.rule=Host(`qbit.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.qbittorrent.tls=true
+      - traefik.http.routers.qbittorrent.tls.certresolver=cloudflare
+      - traefik.http.routers.qbittorrent.service=qbittorrent
+      - traefik.http.services.qbittorrent.loadbalancer.server.port=8080
+      - gatus[1].name=qBittorrent
+      - gatus[1].group=arr Stack
+      - "gatus[1].url=http://gluetun:8080"
+      - gatus[1].interval=5m
+      - 'gatus[1].conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+      # Suwayomi Traefik/Gatus
+      - traefik.http.routers.suwayomi.rule=Host(`suwayomi.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.suwayomi.tls=true
+      - traefik.http.routers.suwayomi.tls.certresolver=cloudflare
+      - traefik.http.routers.suwayomi.service=suwayomi
+      - traefik.http.services.suwayomi.loadbalancer.server.port=4567
+      - gatus[2].name=Suwayomi
+      - gatus[2].group=Media
+      - "gatus[2].url=http://gluetun:4567"
+      - gatus[2].interval=10m
+      - 'gatus[2].conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+
+  qbittorrent:
+    container_name: qbittorrent
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      - WEBUI_PORT=8080
+    image: lscr.io/linuxserver/qbittorrent:latest
+    network_mode: service:gluetun
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/qbittorrent:/config
+      - ${MNT_TORRENT:?MNT_TORRENT not set}:/downloads
+
+  suwayomi-server:
+    container_name: suwayomi-server
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      - AUTH_MODE=ui_login
+      - AUTH_USERNAME=${SUWAYOMI_AUTH_USER:?SUWAYOMI_AUTH_USER not set}
+      - AUTH_PASSWORD=${SUWAYOMI_AUTH_PASS:?SUWAYOMI_AUTH_PASS not set}
+    image: ghcr.io/suwayomi/suwayomi-server:stable
+    network_mode: service:gluetun
+    restart: unless-stopped
+    user: "568:568"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${SUWAYOMI_DOWNLOADS:?SUWAYOMI_DOWNLOADS not set}:/home/suwayomi/.local/share/Tachidesk/downloads
+      - ${SUWAYOMI_LOCAL:?SUWAYOMI_LOCAL not set}:/home/suwayomi/.local/share/Tachidesk/local
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/suwayomi-server/data:/home/suwayomi/.local/share/Tachidesk
 
 networks:
   proxy:
