@@ -1,0 +1,15 @@
+---
+services:
+  ddclient:
+    container_name: ddclient
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    image: lscr.io/linuxserver/ddclient:latest
+    networks:
+      - proxy
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/ddclient/config:/config
