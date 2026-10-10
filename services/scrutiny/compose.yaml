@@ -1,0 +1,66 @@
+---
+services:
+  scrutiny:
+    container_name: scrutiny
+    cap_add:
+      - SYS_RAWIO
+    # Either use /dev:/dev with privileged: true, or map individual drives
+    devices:
+      - /dev/sda
+      - /dev/sdb
+      - /dev/sdc
+      - /dev/sdd
+      - /dev/sde
+      - /dev/sdf
+      - /dev/sdg
+      - /dev/sdh
+      - /dev/sdi
+      - /dev/sdj
+      - /dev/sdk
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    image: ghcr.io/analogj/scrutiny:nightly-omnibus
+    networks:
+      - proxy
+    # ports:
+    #   - "8080:8080"
+    #   - "8086:8086"
+    restart: unless-stopped
+    volumes:
+      - /run/udev:/run/udev:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/scrutiny/config:/opt/scrutiny/config
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/scrutiny/influxdb:/opt/scrutiny/influxdb
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.scrutiny.rule=Host(`scrutiny.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.scrutiny.tls=true
+      - traefik.http.routers.scrutiny.tls.certresolver=cloudflare
+      - traefik.http.services.scrutiny.loadbalancer.server.port=8080
+      # Homepage
+      - homepage.group=Infra
+      - homepage.name=Scrutiny
+      - homepage.icon=scrutiny.png
+      - "homepage.href=https://scrutiny.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Hard drive S.M.A.R.T. monitoring
+      - homepage.widget.type=scrutiny
+      - "homepage.widget.url=http://scrutiny:8080"
+      - homepage.widget.highlight.failed.numeric[0].level=danger
+      - homepage.widget.highlight.failed.numeric[0].when=gt
+      - homepage.widget.highlight.failed.numeric[0].value=0
+      - homepage.widget.highlight.unknown.numeric[0].level=warn
+      - homepage.widget.highlight.unknown.numeric[0].when=gt
+      - homepage.widget.highlight.unknown.numeric[0].value=0
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Scrutiny
+      - gatus.group=Infra
+      - "gatus.url=http://scrutiny:8086"
+      - gatus.interval=5m
+      - 'gatus.conditions=["[STATUS] < 400"]'
+
+networks:
+  proxy:
+    external: true
