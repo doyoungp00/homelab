@@ -39,13 +39,17 @@ services:
       - traefik.http.routers.frigate.rule=Host(`frigate.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.frigate.tls=true
       - traefik.http.routers.frigate.tls.certresolver=cloudflare
+      - traefik.http.routers.frigate.service=frigate
       - traefik.http.services.frigate.loadbalancer.server.port=8971
       # Debug MJPEG endpoint (port 5000, unauthenticated)
       # Gives it a real TLS'd hostname instead of a raw host IP:port, which
       # browsers auto-upgrade/block as mixed content on an HTTPS dashboard.
+      # Two routers + two services on one container need explicit .service=
+      # labels — otherwise Traefik can't unambiguously pair them and drops one.
       - traefik.http.routers.frigate-stream.rule=Host(`frigate-stream.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.frigate-stream.tls=true
       - traefik.http.routers.frigate-stream.tls.certresolver=cloudflare
+      - traefik.http.routers.frigate-stream.service=frigate-stream
       - traefik.http.services.frigate-stream.loadbalancer.server.port=5000
       # Homepage
       - homepage.group=Surveillance
