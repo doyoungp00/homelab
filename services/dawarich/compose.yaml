@@ -79,6 +79,7 @@ services:
     labels:
       # Traefik
       - traefik.enable=true
+      - traefik.docker.network=proxy
       - traefik.http.routers.dawarich.rule=Host(`dawarich.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.dawarich.tls=true
       - traefik.http.routers.dawarich.tls.certresolver=cloudflare
