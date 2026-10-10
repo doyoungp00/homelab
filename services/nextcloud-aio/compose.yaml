@@ -53,7 +53,7 @@ services:
       # loadbalancer.server.url is required here instead of .server.port,
       # since that port lives on a different container than this label is on.
       - traefik.enable=true
-      - traefik.http.routers.nextcloud-aio.rule=Host(`nextcloud.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`) || Host(`nextcloud.${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set}`)
+      - traefik.http.routers.nextcloud-aio.rule=Host(`cloud.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`) || Host(`cloud.${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set}`)
       - traefik.http.routers.nextcloud-aio.tls=true
       - traefik.http.routers.nextcloud-aio.tls.certresolver=cloudflare
       - "traefik.http.services.nextcloud-aio.loadbalancer.server.url=http://nextcloud-aio-apache:11000"
@@ -61,7 +61,7 @@ services:
       - homepage.group=Media
       - homepage.name=Nextcloud AIO
       - homepage.icon=nextcloud.png
-      - "homepage.href=https://nextcloud.${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set}"
+      - "homepage.href=https://cloud.${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set}"
       - homepage.description=Local cloud storage
       - homepage.widget.type=nextcloud
       - "homepage.widget.url=http://nextcloud-aio-apache:11000"
