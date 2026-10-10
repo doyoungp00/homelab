@@ -1,0 +1,52 @@
+---
+services:
+  filebrowser:
+    container_name: filebrowser
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    image: filebrowser/filebrowser
+    networks:
+      - proxy
+    # ports:
+    #   - "80:80"
+    restart: unless-stopped
+    user: "568:568"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_CLOUD:?MNT_CLOUD not set}:${PATH_CLOUD_SRV:?PATH_CLOUD_SRV not set}
+      - ${MNT_HARDPOINT:?MNT_HARDPOINT not set}:${PATH_HARDPOINT_SRV:?PATH_HARDPOINT_SRV not set}
+      - ${MNT_MEDIA:?MNT_MEDIA not set}:${PATH_MEDIA_SRV:?PATH_MEDIA_SRV not set}
+      - ${MNT_APPDATA:?MNT_APPDATA not set}:${PATH_APPDATA_SRV:?PATH_APPDATA_SRV not set}
+      - ${MNT_TORRENT:?MNT_TORRENT not set}:${PATH_TORRENT_SRV:?PATH_TORRENT_SRV not set}
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/filebrowser/database:/database
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/filebrowser/config:/config
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.filebrowser.rule=Host(`files.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.filebrowser.tls=true
+      - traefik.http.routers.filebrowser.tls.certresolver=cloudflare
+      - traefik.http.services.filebrowser.loadbalancer.server.port=80
+      # Homepage
+      - homepage.group=Media
+      - homepage.name=File Browser
+      - homepage.icon=filebrowser.png
+      - "homepage.href=https://files.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Browse local files
+      - homepage.widget.type=filebrowser
+      - "homepage.widget.url=http://filebrowser"
+      - homepage.widget.username=${FILEBROWSER_USER:?FILEBROWSER_USER not set}
+      - homepage.widget.password=${FILEBROWSER_PASS:?FILEBROWSER_PASS not set}
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=File Browser
+      - gatus.group=Media
+      - "gatus.url=http://filebrowser"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+
+networks:
+  proxy:
+    external: true
