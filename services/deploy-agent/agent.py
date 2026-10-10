@@ -9,6 +9,9 @@ startup, then for the life of the container:
     Defaults to force-recreating every service. Add ?force=false to instead
     only apply services whose directory actually changed, same as a poll tick:
       curl -X POST -H "X-Deploy-Secret: $WEBHOOK_SECRET" "http://host:9000/deploy?force=false"
+    Add ?service=<name> to only redeploy that one service (always forced —
+    no reason to single one out and not force it; force is ignored if given):
+      curl -X POST -H "X-Deploy-Secret: $WEBHOOK_SECRET" "http://host:9000/deploy?service=nextcloud-aio"
 """
 
 from __future__ import annotations
@@ -51,13 +54,15 @@ def ensure_clone() -> None:
     )
 
 
-def run_deploy(force: bool) -> None:
+def run_deploy(force: bool, service: str | None = None) -> None:
     if not deploy_lock.acquire(blocking=False):
         log("deploy already running, skipping this trigger")
         return
     try:
         args = ["python3", "-m", "scripts.deploy"]
-        if force:
+        if service:
+            args.extend(["--service", service])
+        elif force:
             args.append("--force")
         subprocess.run(args, cwd=REPO_DIR)
     finally:
@@ -83,13 +88,21 @@ class Handler(BaseHTTPRequestHandler):
             return
         # Defaults to force (recreate everything) to match how this endpoint
         # has always behaved; ?force=false opts into the targeted, diff-only
-        # behavior the poll loop uses instead.
-        raw_force = parse_qs(parsed.query).get("force", ["true"])[0]
+        # behavior the poll loop uses instead. ?service=<name> overrides both,
+        # always forced — there's no scenario where you'd single out a
+        # service and not want it applied.
+        query = parse_qs(parsed.query)
+        service = query.get("service", [None])[0]
+        raw_force = query.get("force", ["true"])[0]
         force = raw_force.lower() not in ("false", "0", "no")
-        threading.Thread(target=run_deploy, kwargs={"force": force}, daemon=True).start()
+        threading.Thread(
+            target=run_deploy, kwargs={"force": force, "service": service}, daemon=True
+        ).start()
         self.send_response(202)
         self.end_headers()
-        self.wfile.write(f"deploy triggered (force={force})\n".encode())
+        self.wfile.write(
+            f"deploy triggered (service={service or 'all'}, force={force})\n".encode()
+        )
 
     def log_message(self, fmt: str, *args) -> None:
         log(fmt % args)

@@ -310,28 +310,81 @@ class TestDeploy:
         assert rc == 1
         assert applied == []
 
+    def test_only_service_applies_just_that_one_without_force_or_changes(
+        self, deploy_repo: DeployRepo, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        applied = self._record_applied(deploy_repo, monkeypatch)
+        self._setup_two_services(deploy_repo)
+        deploy_repo.module.deploy(force=False)
+        applied.clear()
+
+        # Nothing changed and force=False, but --service should still apply
+        # exactly the one named service — same reasoning as --force.
+        rc = deploy_repo.module.deploy(force=False, only_service="svc-a")
+
+        assert rc == 0
+        assert applied == ["svc-a"]
+
+    def test_only_service_rejects_deploy_agent_itself(
+        self,
+        deploy_repo: DeployRepo,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        applied = self._record_applied(deploy_repo, monkeypatch)
+        self._setup_two_services(deploy_repo)
+        deploy_repo.module.deploy(force=False)
+        applied.clear()
+
+        rc = deploy_repo.module.deploy(
+            force=False, only_service=deploy_repo.module.SELF_SERVICE_NAME
+        )
+
+        assert rc == 1
+        assert applied == []
+        assert "deploy-agent" in capsys.readouterr().err
+
+    def test_only_service_reports_missing_service(
+        self,
+        deploy_repo: DeployRepo,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        applied = self._record_applied(deploy_repo, monkeypatch)
+        self._setup_two_services(deploy_repo)
+        deploy_repo.module.deploy(force=False)
+        applied.clear()
+
+        rc = deploy_repo.module.deploy(force=False, only_service="ghost")
+
+        assert rc == 1
+        assert applied == []
+        assert "ghost" in capsys.readouterr().err
+
 
 class TestMain:
     def test_force_flag_is_passed_to_deploy(
         self, deploy_paths: DeployModule, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        received: dict[str, bool] = {}
+        received: dict[str, object] = {}
 
-        def fake_deploy(force: bool) -> int:
+        def fake_deploy(force: bool, only_service: str | None = None) -> int:
             received["force"] = force
+            received["service"] = only_service
             return 0
 
         monkeypatch.setattr(deploy_paths, "deploy", fake_deploy)
 
         assert deploy_paths.main(["--force"]) == 0
         assert received["force"] is True
+        assert received["service"] is None
 
     def test_defaults_force_to_false(
         self, deploy_paths: DeployModule, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        received: dict[str, bool] = {}
+        received: dict[str, object] = {}
 
-        def fake_deploy(force: bool) -> int:
+        def fake_deploy(force: bool, only_service: str | None = None) -> int:
             received["force"] = force
             return 0
 
@@ -339,6 +392,20 @@ class TestMain:
 
         assert deploy_paths.main([]) == 0
         assert received["force"] is False
+
+    def test_service_flag_is_passed_to_deploy(
+        self, deploy_paths: DeployModule, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        received: dict[str, object] = {}
+
+        def fake_deploy(force: bool, only_service: str | None = None) -> int:
+            received["service"] = only_service
+            return 0
+
+        monkeypatch.setattr(deploy_paths, "deploy", fake_deploy)
+
+        assert deploy_paths.main(["--service", "svc-a"]) == 0
+        assert received["service"] == "svc-a"
 
     def test_returns_0_and_skips_when_lock_already_held(
         self, deploy_paths: DeployModule
@@ -359,7 +426,7 @@ class TestMain:
         monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        def boom(force: bool) -> int:
+        def boom(force: bool, only_service: str | None = None) -> int:
             raise deploy_paths.DeployError("kaboom")
 
         monkeypatch.setattr(deploy_paths, "deploy", boom)

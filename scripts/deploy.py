@@ -6,8 +6,10 @@ to apply it. Shared env changes (services/shared/) redeploy every service.
 
 Usage (run from the repo root):
   export SOPS_AGE_KEY_FILE=/path/to/age.key
-  python -m scripts.deploy            # only touch services whose directory changed
-  python -m scripts.deploy --force    # re-apply every service regardless of diff
+  python -m scripts.deploy                      # only touch services whose directory changed
+  python -m scripts.deploy --force               # re-apply every service regardless of diff
+  python -m scripts.deploy --service <name>      # only this one service, always forced —
+                                                  # no reason to single one out and NOT force it
 
 Expects `git` and `docker` (with the compose plugin) on PATH. Takes an
 flock-based lock on LOCK_FILE so an overlapping cron tick and webhook
@@ -143,12 +145,15 @@ def all_service_dirs() -> list[Path]:
     )
 
 
-def deploy(force: bool) -> int:
+def deploy(force: bool, only_service: str | None = None) -> int:
     run("git", "fetch", "--quiet", "origin", BRANCH)
     local = run("git", "rev-parse", "HEAD")
     remote = run("git", "rev-parse", f"origin/{BRANCH}")
 
-    if local == remote and not force:
+    # Targeting one service always applies it, regardless of diff — same
+    # reasoning as --force: there's no scenario where you'd single out a
+    # service and NOT want it applied.
+    if only_service is None and local == remote and not force:
         log(f"up to date at {local}, nothing to do")
         return 0
 
@@ -165,6 +170,30 @@ def deploy(force: bool) -> int:
         return rc
 
     ensure_network("proxy")
+
+    if only_service is not None:
+        if only_service == SELF_SERVICE_NAME:
+            print(
+                f"ERROR: {SELF_SERVICE_NAME} can't be redeployed via --service "
+                "(self-recreation is unsafe) — update it by hand instead",
+                file=sys.stderr,
+            )
+            return 1
+        service_dir = SERVICES_DIR / only_service
+        if not (service_dir / "compose.yaml").is_file():
+            print(f"ERROR: no such service: {only_service}", file=sys.stderr)
+            return 1
+        try:
+            apply_service(service_dir)
+        except subprocess.CalledProcessError as exc:
+            print(
+                f"ERROR: {only_service}: docker compose up failed (exit {exc.returncode})",
+                file=sys.stderr,
+            )
+            return 1
+        prune_images()
+        log(f"deploy complete at {remote} (service={only_service})")
+        return 0
 
     failed = False
     for service_dir in all_service_dirs():
@@ -192,6 +221,11 @@ def main(argv: list[str]) -> int:
     parser.add_argument(
         "--force", action="store_true", help="re-apply every service regardless of diff"
     )
+    parser.add_argument(
+        "--service",
+        metavar="NAME",
+        help="only redeploy this one service (always forced, regardless of --force)",
+    )
     args = parser.parse_args(argv)
 
     LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -203,7 +237,7 @@ def main(argv: list[str]) -> int:
             return 0
 
         try:
-            return deploy(args.force)
+            return deploy(args.force, args.service)
         except DeployError as exc:
             print(f"ERROR: {exc}", file=sys.stderr)
             return 1

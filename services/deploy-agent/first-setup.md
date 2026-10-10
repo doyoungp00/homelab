@@ -73,6 +73,13 @@ behavior as a poll tick), add `?force=false`:
 curl -X POST -H "X-Deploy-Secret: <value>" "http://<truenas-host>:9000/deploy?force=false"
 ```
 
+To redeploy exactly one named service — always forced, regardless of `?force=` —
+without touching anything else, add `?service=<name>`:
+
+```bash
+curl -X POST -H "X-Deploy-Secret: <value>" "http://<truenas-host>:9000/deploy?service=nextcloud-aio"
+```
+
 # 3. Launch
 
 ```bash
