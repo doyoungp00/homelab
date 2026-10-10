@@ -14,9 +14,9 @@ services:
     # ports:
     #   - "5000:5000" # Unauthenticated UI/API
     #   - "8971:8971" # Authenticated web UI + API
-    # - "8554:8554" # RTSP restream (go2rtc)
-    # - "8555:8555/tcp" # WebRTC over TCP
-    # - "8555:8555/udp" # WebRTC over UDP
+    #   - "8554:8554" # RTSP restream (go2rtc)
+    #   - "8555:8555/tcp" # WebRTC over TCP
+    #   - "8555:8555/udp" # WebRTC over UDP
     # privileged: true # Only needed for some hardware setups; try without first
     restart: unless-stopped
     shm_size: 256mb
