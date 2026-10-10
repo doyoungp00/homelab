@@ -1,0 +1,83 @@
+---
+services:
+  chrome:
+    command:
+      - "--disable-gpu"
+      - "--disable-dev-shm-usage"
+      - "--hide-scrollbars"
+      - "--disable-blink-features=AutomationControlled"
+      - "--window-size=1440,900"
+    image: ghcr.io/karakeep-app/karakeep-chrome:release
+    init: true
+    networks:
+      - proxy
+    restart: unless-stopped
+
+  meilisearch:
+    env_file:
+      - path: ../shared/env/base.env
+    environment:
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:?MEILI_MASTER_KEY not set}
+      - MEILI_NO_ANALYTICS=true
+    image: getmeili/meilisearch:v1.41.0
+    networks:
+      - proxy
+    restart: unless-stopped
+    volumes:
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/karakeep/meili_data:/meili_data
+
+  web:
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:?NEXTAUTH_SECRET not set}
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:?MEILI_MASTER_KEY not set}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:?NEXTAUTH_URL not set}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - NODE_OPTIONS=--dns-result-order=ipv4first
+      - MEILI_ADDR=http://meilisearch:7700
+      - BROWSER_WEB_URL=http://chrome:9222
+      - DATA_DIR=/data
+      - CRAWLER_NUM_WORKERS=2
+      - CRAWLER_FULL_PAGE_SCREENSHOT=true
+      - CRAWLER_STORE_PDF=true
+      - CRAWLER_FULL_PAGE_ARCHIVE=true
+      - CRAWLER_VIDEO_DOWNLOAD=true
+    image: ghcr.io/karakeep-app/karakeep:release
+    networks:
+      - proxy
+    # ports:
+    #   - "3000:3000"
+    restart: unless-stopped
+    volumes:
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/karakeep/data:/data
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.karakeep.rule=Host(`karakeep.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.karakeep.tls=true
+      - traefik.http.routers.karakeep.tls.certresolver=cloudflare
+      - traefik.http.services.karakeep.loadbalancer.server.port=3000
+      # Homepage
+      - homepage.group=Media
+      - homepage.name=Karakeep
+      - homepage.icon=karakeep.png
+      - "homepage.href=https://karakeep.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Bookmark everything
+      - homepage.widget.type=karakeep
+      - "homepage.widget.url=http://karakeep:3000"
+      - homepage.widget.key=${KARAKEEP_HOMEPAGE_KEY:?KARAKEEP_HOMEPAGE_KEY not set}
+      - 'homepage.widget.fields=["bookmarks","archived","highlights"]'
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Karakeep
+      - gatus.group=Media
+      - "gatus.url=http://karakeep:3000"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] == 200"]'
+
+networks:
+  proxy:
+    external: true
