@@ -1,0 +1,17 @@
+---
+services:
+  suwayomi-server-downloads-processor:
+    build: .
+    container_name: suwayomi-server-downloads-processor
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    image: suwayomi-server-downloads-processor:latest
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${SUWAYOMI_DOWNLOADS:?SUWAYOMI_DOWNLOADS not set}:/data/download
+      - ${SUWAYOMI_LOCAL:?SUWAYOMI_LOCAL not set}:/data/archive
+      # Where the sqlite audit log persists between restarts.
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/suwayomi-server-downloads-processor/state:/data/state
