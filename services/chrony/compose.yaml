@@ -1,0 +1,31 @@
+services:
+  ntp:
+    container_name: chrony
+    image: dockurr/chrony
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      NTP_SERVERS: "time.cloudflare.com"
+    networks:
+      - proxy
+    ports:
+      - 123:123/udp
+    restart: always
+    labels:
+      # Homepage
+      - homepage.group=Infra
+      - homepage.name=Chrony
+      - homepage.description=Local NTP server
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Chrony
+      - gatus.group=Infra
+      - "gatus.url=udp://chrony:123"
+      - gatus.interval=5m
+      - 'gatus.conditions=["[CONNECTED] == true"]'
+
+networks:
+  proxy:
+    external: true
