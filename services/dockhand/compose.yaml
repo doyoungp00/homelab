@@ -1,0 +1,18 @@
+---
+services:
+  dockhand:
+    container_name: dockhand
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    image: fnsys/dockhand:latest
+    networks:
+      - proxy
+    # ports:
+    #   - "3000:3000"
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/dockhand/data:/app/data
