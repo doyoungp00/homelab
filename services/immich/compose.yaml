@@ -1,0 +1,126 @@
+---
+name: immich
+services:
+  database:
+    container_name: immich_postgres
+    cap_drop:
+      - NET_RAW
+    environment:
+      DB_STORAGE_TYPE: HDD
+      POSTGRES_DB: immich
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER not set}
+      POSTGRES_PASSWORD: ${POSTGRES_PASS:?POSTGRES_PASS not set}
+    healthcheck:
+      disable: false
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+    networks:
+      - proxy
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+    shm_size: 128mb
+    volumes:
+      # Do not edit the next line. If you want to change the database storage location on your system, edit the value of DB_DATA_LOCATION in the .env file
+      - ${DB_DATA_LOCATION}:/var/lib/postgresql/data
+
+  immich-machine-learning:
+    container_name: immich_machine_learning
+    cap_drop:
+      - NET_RAW
+    devices:
+      - /dev/dri:/dev/dri
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    # extends: # uncomment this section for hardware acceleration - see https://docs.immich.app/features/ml-hardware-acceleration
+    #   file: hwaccel.ml.yml
+    #   service: openvino # set to one of [armnn, cuda, rocm, openvino, openvino-wsl, rknn] for accelerated inference - use the `-wsl` version for WSL2 where applicable
+    healthcheck:
+      disable: false
+    # For hardware acceleration, add one of -[armnn, cuda, rocm, openvino, rknn] to the image tag.
+    # Example tag: ${IMMICH_VERSION:-release}-cuda
+    image: ghcr.io/immich-app/immich-machine-learning:v3-openvino
+    networks:
+      - proxy
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/immich/ml-model-cache:/cache
+
+  immich-server:
+    container_name: immich_server
+    cap_drop:
+      - NET_RAW
+    depends_on:
+      - redis
+      - database
+    devices:
+      - /dev/dri:/dev/dri
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    # extends:
+    #   file: hwaccel.transcoding.yml
+    #   service: vaapi # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
+    healthcheck:
+      disable: false
+    image: ghcr.io/immich-app/immich-server:v3
+    # ports:
+    #   - "2283:2283"
+    networks:
+      - proxy
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      # Do not edit the next line. If you want to change the media storage location on your system, edit the value of UPLOAD_LOCATION in the .env file
+      - ${UPLOAD_LOCATION:?UPLOAD_LOCATION not set}:/data
+      - /etc/localtime:/etc/localtime:ro
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.immich.rule=Host(`immich.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.immich.tls=true
+      - traefik.http.routers.immich.tls.certresolver=cloudflare
+      - traefik.http.services.immich.loadbalancer.server.port=2283
+      # Homepage
+      - homepage.group=Media
+      - homepage.name=Immich
+      - homepage.icon=immich.png
+      - "homepage.href=https://immich.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=View and manage photos
+      - homepage.widget.type=immich
+      - "homepage.widget.url=http://immich-server:2283"
+      - homepage.widget.key=${IMMICH_HOMEPAGE_KEY:?IMMICH_HOMEPAGE_KEY not set}
+      - homepage.widget.version=2
+      - 'homepage.widget.fields=["photos","videos","storage"]'
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Immich
+      - gatus.group=Media
+      - "gatus.url=http://immich-server:2283/api/server/ping"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] == 200", "[RESPONSE_TIME] < 1000"]'
+
+  redis:
+    container_name: immich_redis
+    cap_drop:
+      - NET_RAW
+    healthcheck:
+      test: redis-cli ping | grep -q PONG || exit 1
+    image: docker.io/valkey/valkey:9@sha256:418652cfb58ef879d4978c33553735d7147016032d5aefaa14c828e611eb9dfd
+    networks:
+      - proxy
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/immich/redis:/data
+
+networks:
+  proxy:
+    external: true
