@@ -16,6 +16,29 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - /var/run/docker.sock:/var/run/docker.sock
       - ${MNT_APPDATA:?MNT_APPDATA not set}/dockhand/data:/app/data
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.dockhand.rule=Host(`calibre.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.dockhand.tls=true
+      - traefik.http.routers.dockhand.tls.certresolver=cloudflare
+      - traefik.http.services.dockhand.loadbalancer.server.port=8083
+      # Homepage
+      - homepage.group=Infra
+      - homepage.name=Dockhand
+      - homepage.icon=dockhand.png
+      - "homepage.href=https://dockhand.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Docker containers overview
+      - homepage.widget.type=dockhand
+      - "homepage.widget.url=http://dockhand:8083"
+      - 'homepage.widget.fields=["stacks","running","events_today"]'
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Dockhand
+      - gatus.group=Infra
+      - "gatus.url=http://dockhand:8083/ping"
+      - gatus.interval=5m
+      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
 
 networks:
   proxy:
