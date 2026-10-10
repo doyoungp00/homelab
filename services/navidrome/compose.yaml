@@ -23,7 +23,7 @@ services:
     labels:
       # Traefik
       - traefik.enable=true
-      - traefik.http.routers.navidrome.rule=Host(`navidrome.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.navidrome.rule=Host(`navidrome.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`) || Host(`navidrome.${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set}`)
       - traefik.http.routers.navidrome.tls=true
       - traefik.http.routers.navidrome.tls.certresolver=cloudflare
       - traefik.http.services.navidrome.loadbalancer.server.port=4533

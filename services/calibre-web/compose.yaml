@@ -41,9 +41,9 @@ services:
       - gatus.enable=true
       - gatus.name=Calibre Web
       - gatus.group=Media
-      - "gatus.url=http://calibre-web:8083/ping"
+      - "gatus.url=http://calibre-web:8083"
       - gatus.interval=10m
-      - 'gatus.conditions=["[STATUS] == 200"]'
+      - 'gatus.conditions=["[STATUS] < 400"]'
 
 networks:
   proxy:

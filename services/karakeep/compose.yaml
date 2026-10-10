@@ -76,7 +76,7 @@ services:
       - gatus.group=Media
       - "gatus.url=http://karakeep:3000"
       - gatus.interval=10m
-      - 'gatus.conditions=["[STATUS] == 200"]'
+      - 'gatus.conditions=["[STATUS] < 400"]'
 
 networks:
   proxy:
