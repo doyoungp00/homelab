@@ -39,7 +39,7 @@ services:
       - "gatus.group=arr Stack"
       - "gatus.url=http://bazarr:6767"
       - gatus.interval=10m
-      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+      - 'gatus.conditions=["[STATUS] == 200", "[RESPONSE_TIME] < 1000"]'
 
   flaresolverr:
     container_name: flaresolverr
@@ -72,7 +72,7 @@ services:
       - "gatus.group=arr Stack"
       - "gatus.url=http://flaresolverr:8191"
       - gatus.interval=10m
-      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+      - 'gatus.conditions=["[STATUS] == 200", "[RESPONSE_TIME] < 1000"]'
 
   prowlarr:
     container_name: prowlarr
@@ -135,7 +135,7 @@ services:
       - "gatus.group=arr Stack"
       - "gatus.url=http://radarr:7878"
       - gatus.interval=10m
-      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+      - 'gatus.conditions=["[STATUS] == 200", "[RESPONSE_TIME] < 1000"]'
 
   sonarr:
     container_name: sonarr
@@ -176,7 +176,7 @@ services:
       - "gatus.group=arr Stack"
       - "gatus.url=http://sonarr:8989"
       - gatus.interval=10m
-      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+      - 'gatus.conditions=["[STATUS] == 200", "[RESPONSE_TIME] < 1000"]'
 
   gluetun:
     cap_add:
@@ -248,7 +248,7 @@ services:
       - "gatus.group=arr Stack"
       - "gatus.url=http://gluetun:9696"
       - gatus.interval=10m
-      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+      - 'gatus.conditions=["[STATUS] == 200", "[RESPONSE_TIME] < 1000"]'
       # qBittorrent Traefik/Gatus
       # Defined on gluetun since it shares its network namespace.
       # No homepage.* here: Homepage's label discovery maps one container to
@@ -266,7 +266,7 @@ services:
       - gatus[1].group=arr Stack
       - "gatus[1].url=http://gluetun:8080"
       - gatus[1].interval=5m
-      - 'gatus[1].conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+      - 'gatus[1].conditions=["[STATUS] == 200", "[RESPONSE_TIME] < 1000"]'
       # Suwayomi Traefik/Gatus
       - traefik.http.routers.suwayomi.rule=Host(`suwayomi.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.suwayomi.tls=true
@@ -277,7 +277,7 @@ services:
       - gatus[2].group=Media
       - "gatus[2].url=http://gluetun:4567"
       - gatus[2].interval=10m
-      - 'gatus[2].conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+      - 'gatus[2].conditions=["[STATUS] == 200", "[RESPONSE_TIME] < 1000"]'
 
   qbittorrent:
     container_name: qbittorrent

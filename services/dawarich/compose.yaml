@@ -96,7 +96,7 @@ services:
       - gatus.group=Services
       - "gatus.url=http://dawarich_app:3000/api/v1/health"
       - gatus.interval=1m
-      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+      - 'gatus.conditions=["[STATUS] == 200", "[RESPONSE_TIME] < 1000"]'
 
   dawarich_db:
     container_name: dawarich_db

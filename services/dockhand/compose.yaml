@@ -38,7 +38,7 @@ services:
       - gatus.group=Infra
       - "gatus.url=http://dockhand:3000/ping"
       - gatus.interval=5m
-      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+      - 'gatus.conditions=["[STATUS] == 200"]'
 
 networks:
   proxy:

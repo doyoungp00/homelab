@@ -45,7 +45,7 @@ services:
       - gatus.group=Media
       - "gatus.url=http://filebrowser"
       - gatus.interval=10m
-      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+      - 'gatus.conditions=["[STATUS] == 200", "[RESPONSE_TIME] < 1000"]'
 
 networks:
   proxy:
