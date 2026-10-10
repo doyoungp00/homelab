@@ -16,6 +16,12 @@ services:
       - "--certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare"
       - "--certificatesresolvers.cloudflare.acme.email=${ACME_EMAIL}"
       - "--certificatesresolvers.cloudflare.acme.storage=/etc/traefik/acme.json"
+      # Nextcloud's WebDAV sync relies on encoded-slash URLs that Traefik v3
+      # otherwise rejects/mangles by default — no per-router fix exists for
+      # this, only this global entrypoint setting.
+      - "--entrypoints.websecure.http.encodedCharacters.allowEncodedSlash=true"
+      - "--entrypoints.websecure.http.encodedCharacters.allowEncodedQuestionMark=true"
+      - "--entrypoints.websecure.http.encodedCharacters.allowEncodedPercent=true"
     env_file:
       - path: .env
         required: false
