@@ -27,6 +27,7 @@ services:
       - ${MNT_APPDATA:?MNT_APPDATA not set}/karakeep/meili_data:/meili_data
 
   web:
+    container_name: karakeep
     env_file:
       - path: .env
         required: false
