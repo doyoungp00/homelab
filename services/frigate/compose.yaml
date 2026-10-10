@@ -11,12 +11,12 @@ services:
     image: ghcr.io/blakeblackshear/frigate:stable
     networks:
       - proxy
-    # ports:
-    #   - "5000:5000" # Unauthenticated UI/API
-    #   - "8971:8971" # Authenticated web UI + API
-    #   - "8554:8554" # RTSP restream (go2rtc)
-    #   - "8555:8555/tcp" # WebRTC over TCP
-    #   - "8555:8555/udp" # WebRTC over UDP
+    ports:
+      - "5000:5000" # Unauthenticated UI/API - published so browsers can reach the MJPEG debug widget directly
+      # - "8971:8971" # Authenticated web UI + API
+      # - "8554:8554" # RTSP restream (go2rtc)
+      # - "8555:8555/tcp" # WebRTC over TCP
+      # - "8555:8555/udp" # WebRTC over UDP
     # privileged: true # Only needed for some hardware setups; try without first
     restart: unless-stopped
     shm_size: 256mb
@@ -51,7 +51,7 @@ services:
       - homepage.widgets[0].username=${FRIGATE_USER:?FRIGATE_USER not set}
       - homepage.widgets[0].password=${FRIGATE_PASS:?FRIGATE_PASS not set}
       - homepage.widgets[1].type=mjpeg
-      - "homepage.widgets[1].stream=http://frigate:5000/api/${FRIGATE_CAMERA_01_NAME:?FRIGATE_CAMERA_01_NAME not set}?fps=24&h=480"
+      - "homepage.widgets[1].stream=http://${HOST_IP:?HOST_IP not set}:5000/api/${FRIGATE_CAMERA_01_NAME:?FRIGATE_CAMERA_01_NAME not set}?fps=24&h=480"
       # Gatus
       - gatus.enable=true
       - gatus.name=Frigate NVR
