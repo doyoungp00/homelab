@@ -1,0 +1,65 @@
+---
+services:
+  frigate:
+    container_name: frigate
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    devices:
+      - /dev/dri/renderD128 # Intel/AMD GPU for ffmpeg hardware decoding
+    image: ghcr.io/blakeblackshear/frigate:stable
+    networks:
+      - proxy
+    # ports:
+    #   - "5000:5000" # Unauthenticated UI/API
+    #   - "8971:8971" # Authenticated web UI + API
+    #   - "8554:8554" # RTSP restream (go2rtc)
+    #   - "8555:8555/tcp" # WebRTC over TCP
+    #   - "8555:8555/udp" # WebRTC over UDP
+    # privileged: true # Only needed for some hardware setups; try without first
+    restart: unless-stopped
+    shm_size: 256mb
+    stop_grace_period: 30s
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/frigate/config:/config
+      - ${PATH_IPCAM:?PATH_IPCAM not set}:/media/frigate
+      - target: /tmp/cache
+        tmpfs:
+          size: 1000000000
+        type: tmpfs
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.frigate.rule=Host(`frigate.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.frigate.tls=true
+      - traefik.http.routers.frigate.tls.certresolver=cloudflare
+      - traefik.http.services.frigate.loadbalancer.server.port=8971
+      # Homepage
+      - homepage.group=Surveillance
+      - homepage.name=Frigate NVR
+      - homepage.icon=frigate.png
+      - "homepage.href=https://frigate.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Home surveillance
+      - homepage.widget[0].type=frigate
+      - "homepage.widget[0].url=http://frigate"
+      - homepage.widget[0].username=${FRIGATE_USER:?FRIGATE_USER not set}
+      - homepage.widget[0].password=${FRIGATE_PASS:?FRIGATE_PASS not set}
+      - homepage.widget[1].type=mjpeg
+      - "homepage.widget[1].stream=http://frigate:5000/api/${FRIGATE_CAMERA_01_NAME:?FRIGATE_CAMERA_01_NAME not set}?fps=24&h=480"
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Frigate NVR
+      - gatus.group=Infra
+      - "gatus.url=http://frigate:8971"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+
+networks:
+  proxy:
+    external: true
