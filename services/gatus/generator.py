@@ -141,7 +141,10 @@ def build_config() -> dict[str, Any]:
             continue
         endpoints.extend(container_endpoints)
     endpoints.sort(key=lambda e: e["name"])
-    return {"endpoints": endpoints}
+    return {
+        "storage": {"type": "sqlite", "path": "/data/data.db"},
+        "endpoints": endpoints,
+    }
 
 
 def write_if_changed(config: dict[str, Any]) -> None:
