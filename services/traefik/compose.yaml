@@ -38,6 +38,12 @@ services:
       - traefik.http.routers.traefik.tls=true
       - traefik.http.routers.traefik.tls.certresolver=cloudflare
       - traefik.http.routers.traefik.service=api@internal
+      # TrueNAS's own web UI
+      - traefik.http.routers.truenas.rule=Host(`nas.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.truenas.tls=true
+      - traefik.http.routers.truenas.tls.certresolver=cloudflare
+      - traefik.http.routers.truenas.service=truenas
+      - "traefik.http.services.truenas.loadbalancer.server.url=http://${HOST_IP:?HOST_IP not set}:81"
       # Homepage
       - homepage.group=Infra
       - homepage.name=Traefik
