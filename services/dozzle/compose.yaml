@@ -23,8 +23,11 @@ services:
       retries: 3
       start_period: 30s
       test:
-        - CMD-SHELL
-        - curl -fSs http://127.0.0.1:8080 || exit 1
+        # Dozzle's image is built FROM scratch - no shell, no curl/wget.
+        # Its binary ships a built-in healthcheck subcommand instead.
+        - CMD
+        - /dozzle
+        - healthcheck
       timeout: 10s
     image: amir20/dozzle:latest
     networks:

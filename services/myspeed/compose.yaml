@@ -11,8 +11,12 @@ services:
       retries: 3
       start_period: 30s
       test:
-        - CMD-SHELL
-        - curl -fSs http://127.0.0.1:5216 || exit 1
+        - CMD
+        - wget
+        - --no-verbose
+        - --tries=1
+        - --spider
+        - http://127.0.0.1:5216
       timeout: 10s
     image: germannewsmaker/myspeed:latest
     networks:
