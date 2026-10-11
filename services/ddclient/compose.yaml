@@ -13,6 +13,12 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${MNT_APPDATA:?MNT_APPDATA not set}/ddclient/config:/config
+    labels:
+      # Homepage
+      - homepage.group=Infra
+      - homepage.name=ddclient
+      - homepage.icon=Ddclient.png
+      - homepage.description=Dynamic DNS updater
 
 networks:
   proxy:

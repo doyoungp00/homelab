@@ -9,6 +9,14 @@ services:
     environment:
       - ND_DEFAULTTHEME=Spotify-ish
       - ND_DEFAULTPLAYLISTPUBLICVISIBILITY=true
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      test:
+        - CMD-SHELL
+        - curl -fSs http://127.0.0.1:4533 || exit 1
+      timeout: 10s
     image: deluan/navidrome:latest
     networks:
       - proxy

@@ -6,6 +6,14 @@ services:
       - path: .env
         required: false
       - path: ../shared/env/base.env
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      test:
+        - CMD-SHELL
+        - curl -fSs http://127.0.0.1:6767 || exit 1
+      timeout: 10s
     image: lscr.io/linuxserver/bazarr:latest
     networks:
       - proxy
@@ -51,6 +59,14 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - LOG_HTML=${LOG_HTML:-false}
       - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      test:
+        - CMD-SHELL
+        - curl -fSs http://127.0.0.1:8191 || exit 1
+      timeout: 10s
     image: ghcr.io/flaresolverr/flaresolverr:latest
     networks:
       - proxy
@@ -66,6 +82,11 @@ services:
       - traefik.http.routers.flaresolverr.tls=true
       - traefik.http.routers.flaresolverr.tls.certresolver=cloudflare
       - traefik.http.services.flaresolverr.loadbalancer.server.port=8191
+      # Homepage
+      - homepage.group=Downloads
+      - homepage.name=Flaresolverr
+      - homepage.icon=flaresolverr.png
+      - homepage.description=Cloudflare protection bypass proxy
       # Gatus
       - gatus.enable=true
       - gatus.name=Flaresolverr
@@ -102,6 +123,14 @@ services:
       - path: .env
         required: false
       - path: ../shared/env/base.env
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      test:
+        - CMD-SHELL
+        - curl -fSs http://127.0.0.1:7878 || exit 1
+      timeout: 10s
     image: lscr.io/linuxserver/radarr:latest
     networks:
       - proxy
@@ -143,6 +172,14 @@ services:
       - path: .env
         required: false
       - path: ../shared/env/base.env
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      test:
+        - CMD-SHELL
+        - curl -fSs http://127.0.0.1:8989 || exit 1
+      timeout: 10s
     image: lscr.io/linuxserver/sonarr:latest
     networks:
       - proxy
@@ -290,6 +327,14 @@ services:
       - path: ../shared/env/base.env
     environment:
       - WEBUI_PORT=8080
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      test:
+        - CMD-SHELL
+        - curl -fSs http://127.0.0.1:8080 || exit 1
+      timeout: 10s
     image: lscr.io/linuxserver/qbittorrent:latest
     network_mode: service:gluetun
     restart: unless-stopped
@@ -311,6 +356,14 @@ services:
       - AUTH_MODE=ui_login
       - AUTH_USERNAME=${SUWAYOMI_AUTH_USER:?SUWAYOMI_AUTH_USER not set}
       - AUTH_PASSWORD=${SUWAYOMI_AUTH_PASS:?SUWAYOMI_AUTH_PASS not set}
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      test:
+        - CMD-SHELL
+        - curl -fSs http://127.0.0.1:4567 || exit 1
+      timeout: 10s
     image: ghcr.io/suwayomi/suwayomi-server:stable
     network_mode: service:gluetun
     restart: unless-stopped

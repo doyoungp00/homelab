@@ -13,6 +13,19 @@ services:
       - POLL_INTERVAL_SECONDS=900
       - SOPS_AGE_KEY_FILE=/run/secrets/age.key
       - WEBHOOK_SECRET=${WEBHOOK_SECRET:?WEBHOOK_SECRET not set}
+    healthcheck:
+      interval: 30s
+      retries: 3
+      # agent.py only starts listening after its initial reconcile
+      # force-redeploys every service in the stack, which can take minutes.
+      start_period: 180s
+      test:
+        # No GET handler is defined (only do_POST), so any GET returns 501 -
+        # that's fine, it still proves the HTTP server is alive and
+        # responding. Deliberately no -f: curl would treat 501 as failure.
+        - CMD-SHELL
+        - curl -sS http://127.0.0.1:9000/ -o /dev/null || exit 1
+      timeout: 10s
     ports:
       - "9000:9000"
     restart: unless-stopped

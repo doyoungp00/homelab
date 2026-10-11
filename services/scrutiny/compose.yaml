@@ -21,6 +21,14 @@ services:
       - path: .env
         required: false
       - path: ../shared/env/base.env
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      test:
+        - CMD-SHELL
+        - curl -fSs http://127.0.0.1:8080 || exit 1
+      timeout: 10s
     image: ghcr.io/analogj/scrutiny:nightly-omnibus
     networks:
       - proxy

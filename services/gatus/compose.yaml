@@ -5,6 +5,14 @@ services:
     env_file:
       - path: .env
         required: false
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      test:
+        - CMD-SHELL
+        - curl -fSs http://127.0.0.1:8080 || exit 1
+      timeout: 10s
     image: ghcr.io/twin/gatus:latest
     networks:
       - proxy

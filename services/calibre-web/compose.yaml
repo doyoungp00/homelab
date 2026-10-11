@@ -9,6 +9,16 @@ services:
     environment:
       # Include Calibre's ebook-convert binary (x64 only)
       - DOCKER_MODS=linuxserver/mods:universal-calibre
+    healthcheck:
+      interval: 30s
+      retries: 3
+      # Generous start_period since the universal-calibre mod downloads and
+      # installs Calibre's conversion tools on first boot, which takes a while.
+      start_period: 500s
+      test:
+        - CMD-SHELL
+        - curl -fSs http://127.0.0.1:8083 || exit 1
+      timeout: 10s
     image: lscr.io/linuxserver/calibre-web:latest
     networks:
       - proxy
