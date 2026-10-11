@@ -17,7 +17,7 @@ services:
       # Homepage
       - homepage.group=Infra
       - homepage.name=ddclient
-      - homepage.icon=Ddclient.png
+      - homepage.icon=ddclient.png
       - homepage.description=Dynamic DNS updater
 
 networks:
