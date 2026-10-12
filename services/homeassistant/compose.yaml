@@ -1,0 +1,47 @@
+---
+services:
+  homeassistant:
+    container_name: homeassistant
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    # environment:
+    #   TZ: Europe/Amsterdam
+    image: ghcr.io/home-assistant/home-assistant:stable
+    networks:
+      - proxy
+    privileged: true
+    restart: unless-stopped
+    stop_grace_period: 60s
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/homeassistant/config:/config
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.homeassistant.rule=Host(`assistant.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.homeassistant.tls=true
+      - traefik.http.routers.homeassistant.tls.certresolver=cloudflare
+      - traefik.http.services.homeassistant.loadbalancer.server.port=8123
+      # Homepage
+      - homepage.group=Infra
+      - homepage.name=Home Assistant
+      - homepage.icon=home-assistant.png
+      - "homepage.href=https://assistant.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Open source home automation
+      - homepage.widget.type=homeassistant
+      - "homepage.widget.url=http://homeassistant:8123"
+      - homepage.widget.key=${HOMEASSISTANT_HOMEPAGE_KEY:?HOMEASSISTANT_HOMEPAGE_KEY not set}
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Home Assistant
+      - gatus.group=Infra
+      - "gatus.url=http://homeassistant:8123"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] < 400"]'
+
+networks:
+  proxy:
+    external: true
