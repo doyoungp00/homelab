@@ -1,0 +1,60 @@
+services:
+  code-server:
+    container_name: code-server
+    build: .
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      - PASSWORD=${PASSWORD:?PASSWORD not set}
+      - HOME=/home/coder
+      - XDG_DATA_HOME=/home/coder/.local/share
+      - XDG_CONFIG_HOME=/home/coder/.config
+      - DOTNET_CLI_TELEMETRY_OPTOUT=1
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      test:
+        - CMD-SHELL
+        - curl -fSs http://127.0.0.1:8080/healthz || exit 1
+      timeout: 10s
+    networks:
+      - proxy
+    # ports:
+    #   - "8080:8080"
+    restart: unless-stopped
+    user: "568:568"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/code-server/config:/home/coder/.config
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/code-server/data:/home/coder/.local/share/code-server
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/code-server/projects:/home/coder/project
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/code-server/nuget:/home/coder/.nuget
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/code-server/cargo-registry:/usr/local/cargo/registry
+    working_dir: /home/coder/project
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.code-server.rule=Host(`code.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.code-server.tls=true
+      - traefik.http.routers.code-server.tls.certresolver=cloudflare
+      - traefik.http.services.code-server.loadbalancer.server.port=8080
+      # Homepage
+      - homepage.group=Services
+      - homepage.name=Code Server
+      - homepage.icon=code-server.png
+      - "homepage.href=https://code.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=VS Code in the browser
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Code Server
+      - gatus.group=Services
+      - "gatus.url=http://code-server:8080/healthz"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] < 400"]'
+
+networks:
+  proxy:
+    external: true
