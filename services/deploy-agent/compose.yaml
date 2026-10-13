@@ -47,7 +47,7 @@ services:
       # Homepage
       - homepage.group=Infra
       - homepage.name=Deploy Agent
-      - homepage.icon=deployrr.png
+      - homepage.icon=deployarr.png
       - "homepage.href=https://deploy-agent.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
       - homepage.description=Automated serivce deployment
       # Gatus
