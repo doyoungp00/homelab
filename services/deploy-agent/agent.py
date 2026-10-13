@@ -32,6 +32,7 @@ BRANCH = os.environ.get("BRANCH", "main")
 POLL_INTERVAL_SECONDS = int(os.environ.get("POLL_INTERVAL_SECONDS", "900"))
 PORT = int(os.environ.get("PORT", "9000"))
 WEBHOOK_SECRET = os.environ["WEBHOOK_SECRET"]
+FAVICON_PATH = Path(__file__).parent / "favicon.png"
 
 # Mirrors all_service_dirs()'s exclusion in scripts/deploy.py: `shared` isn't
 # deployable, and `deploy-agent` can't safely redeploy itself mid-execution.
@@ -44,6 +45,7 @@ PAGE_HTML = """<!doctype html>
 <head>
 <meta charset="utf-8">
 <title>Homelab Deploy</title>
+<link rel="icon" type="image/png" href="/favicon.png">
 <style>
   body { font-family: system-ui, sans-serif; max-width: 32rem; margin: 3rem auto; padding: 0 1rem; }
   label { display: block; margin-top: 1rem; font-weight: 600; }
@@ -188,6 +190,19 @@ class Handler(BaseHTTPRequestHandler):
             body = PAGE_HTML.encode()
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        if parsed.path == "/favicon.png":
+            try:
+                body = FAVICON_PATH.read_bytes()
+            except FileNotFoundError:
+                self.send_response(404)
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "image/png")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)

@@ -49,7 +49,7 @@ services:
       - homepage.name=Deploy Agent
       - homepage.icon=deployarr.png
       - "homepage.href=https://deploy-agent.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
-      - homepage.description=Automated serivce deployment
+      - homepage.description=Automated service deployment
       # Gatus
       - gatus.enable=true
       - gatus.name=Deploy Agent
