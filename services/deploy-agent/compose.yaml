@@ -27,11 +27,37 @@ services:
         - CMD-SHELL
         - curl -sS http://127.0.0.1:9000/ -o /dev/null || exit 1
       timeout: 10s
-    ports:
-      - "9000:9000"
+    networks:
+      - proxy
+    # ports:
+    #   - "9000:9000"
     restart: unless-stopped
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /var/run/docker.sock:/var/run/docker.sock
       - ${MNT_APPDATA:?MNT_APPDATA not set}/deploy-agent/repo:/repo
       - ${MNT_APPDATA:?MNT_APPDATA not set}/deploy-agent/age.key:/run/secrets/age.key:ro
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.deploy-agent.rule=Host(`deploy-agent.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.deploy-agent.tls=true
+      - traefik.http.routers.deploy-agent.tls.certresolver=cloudflare
+      - traefik.http.services.deploy-agent.loadbalancer.server.port=9000
+      # Homepage
+      - homepage.group=Infra
+      - homepage.name=Deploy Agent
+      - homepage.icon=deployrr.png
+      - "homepage.href=https://deploy-agent.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Automated serivce deployment
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Deploy Agent
+      - gatus.group=Infra
+      - "gatus.url=http://deploy-agent:9000"
+      - gatus.interval=1m
+      - 'gatus.conditions=["[STATUS] < 400"]'
+
+networks:
+  proxy:
+    external: true
