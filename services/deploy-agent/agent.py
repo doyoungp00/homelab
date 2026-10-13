@@ -1,7 +1,8 @@
 """Entrypoint for the deploy-agent container.
 
 Clones the homelab repo if it isn't already present, reconciles once on
-startup, then for the life of the container:
+startup (force only on that first-ever clone; a restart just reconciles
+whatever changed, same as a poll tick), then for the life of the container:
   - a background thread re-runs `python -m scripts.deploy` every
     POLL_INTERVAL_SECONDS, picking up new commits on BRANCH
   - an HTTP server on PORT takes an immediate, LAN-only manual trigger:
@@ -130,8 +131,10 @@ def log(message: str) -> None:
     print(f"[agent] {message}", flush=True)
 
 
-def ensure_clone() -> None:
-    if not (REPO_DIR / ".git").is_dir():
+def ensure_clone() -> bool:
+    """Returns True only on a genuine fresh clone (nothing deployed yet)."""
+    fresh = not (REPO_DIR / ".git").is_dir()
+    if fresh:
         log(f"cloning {REPO_URL} into {REPO_DIR}")
         REPO_DIR.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run(
@@ -144,6 +147,7 @@ def ensure_clone() -> None:
         ["git", "config", "--global", "--add", "safe.directory", str(REPO_DIR)],
         check=True,
     )
+    return fresh
 
 
 def run_deploy(force: bool, service: str | None = None) -> None:
@@ -232,9 +236,13 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main() -> int:
-    ensure_clone()
+    fresh = ensure_clone()
     log("initial reconcile")
-    run_deploy(force=True)
+    # Force only on a genuine first-ever bring-up. Forcing on every restart
+    # (container recreate, host reboot, OOM) redeployed every service every
+    # time deploy-agent itself got redeployed — same bug diff-based reconcile
+    # already avoids for the poll loop.
+    run_deploy(force=fresh)
 
     threading.Thread(target=poll_loop, daemon=True).start()
 

@@ -16,8 +16,9 @@ services:
     healthcheck:
       interval: 30s
       retries: 3
-      # agent.py only starts listening after its initial reconcile
-      # force-redeploys every service in the stack, which can take minutes.
+      # agent.py only starts listening after its initial reconcile. Usually
+      # fast (diff-only), but a genuine first-ever clone force-redeploys
+      # every service in the stack, which can take minutes.
       start_period: 180s
       test:
         # GET / serves the deploy GUI (200). Deliberately no -f anyway: this
