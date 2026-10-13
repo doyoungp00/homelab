@@ -20,9 +20,9 @@ services:
       # force-redeploys every service in the stack, which can take minutes.
       start_period: 180s
       test:
-        # No GET handler is defined (only do_POST), so any GET returns 501 -
-        # that's fine, it still proves the HTTP server is alive and
-        # responding. Deliberately no -f: curl would treat 501 as failure.
+        # GET / serves the deploy GUI (200). Deliberately no -f anyway: this
+        # only needs to prove the HTTP server is alive and responding, not
+        # that this particular route succeeds.
         - CMD-SHELL
         - curl -sS http://127.0.0.1:9000/ -o /dev/null || exit 1
       timeout: 10s

@@ -60,7 +60,11 @@ It authenticates the manual-trigger endpoint in [agent.py](agent.py)'s `Handler.
 LAN-only with no TLS, so this header is the only thing stopping another device on the LAN from
 forcing a redeploy — it gates _who can trigger_, not any data in transit.
 
-To trigger a deploy manually (force-recreates every service):
+Easiest way to trigger a deploy: open `http://<truenas-host>:9000/` in a browser. It's a small
+GUI served by `agent.py` itself — pick a service (or leave it on "All services"), enter the
+secret, and click Deploy. Watch the result in Dozzle or `docker logs deploy-agent`.
+
+The same thing via curl, e.g. for scripting or cron (force-recreates every service):
 
 ```bash
 curl -X POST -H "X-Deploy-Secret: <value>" http://<truenas-host>:9000/deploy

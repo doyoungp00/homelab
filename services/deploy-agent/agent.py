@@ -16,6 +16,7 @@ startup, then for the life of the container:
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import threading
@@ -31,7 +32,98 @@ POLL_INTERVAL_SECONDS = int(os.environ.get("POLL_INTERVAL_SECONDS", "900"))
 PORT = int(os.environ.get("PORT", "9000"))
 WEBHOOK_SECRET = os.environ["WEBHOOK_SECRET"]
 
+# Mirrors all_service_dirs()'s exclusion in scripts/deploy.py: `shared` isn't
+# deployable, and `deploy-agent` can't safely redeploy itself mid-execution.
+SERVICE_EXCLUDE = {"shared", "deploy-agent"}
+
 deploy_lock = threading.Lock()
+
+PAGE_HTML = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Homelab Deploy</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 32rem; margin: 3rem auto; padding: 0 1rem; }
+  label { display: block; margin-top: 1rem; font-weight: 600; }
+  input, select { width: 100%; padding: 0.4rem; margin-top: 0.25rem; box-sizing: border-box; }
+  .checkbox-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; }
+  .checkbox-row input { width: auto; }
+  .checkbox-row label { margin: 0; font-weight: normal; }
+  button { margin-top: 1.5rem; padding: 0.5rem 1.2rem; font-size: 1rem; cursor: pointer; }
+  button:disabled { cursor: default; opacity: 0.6; }
+  pre { background: #f0f0f0; padding: 0.75rem; margin-top: 1rem; white-space: pre-wrap; word-break: break-word; }
+  .hint { color: #666; font-size: 0.85rem; margin-top: 1.5rem; }
+</style>
+</head>
+<body>
+<h1>Homelab Deploy</h1>
+
+<label for="secret">Deploy secret</label>
+<input id="secret" type="password" autocomplete="current-password">
+
+<label for="service">Service</label>
+<select id="service"><option value="">All services</option></select>
+
+<div class="checkbox-row">
+  <input id="force" type="checkbox" checked>
+  <label for="force">Force recreate (always on when a specific service is picked)</label>
+</div>
+
+<button id="deploy-btn">Deploy</button>
+<pre id="status"></pre>
+
+<p class="hint">Watch the actual deploy output in Dozzle or <code>docker logs deploy-agent</code> — this page only shows whether the trigger was accepted.</p>
+
+<script>
+fetch("/services").then(r => r.json()).then(names => {
+  const select = document.getElementById("service");
+  for (const name of names) {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    select.appendChild(opt);
+  }
+});
+
+const forceBox = document.getElementById("force");
+document.getElementById("service").addEventListener("change", (e) => {
+  forceBox.disabled = e.target.value !== "";
+});
+
+document.getElementById("deploy-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("deploy-btn");
+  const status = document.getElementById("status");
+  const secret = document.getElementById("secret").value;
+  const service = document.getElementById("service").value;
+  const force = forceBox.checked;
+
+  const params = new URLSearchParams();
+  if (service) {
+    params.set("service", service);
+  } else {
+    params.set("force", force ? "true" : "false");
+  }
+
+  btn.disabled = true;
+  status.textContent = "triggering...";
+  try {
+    const res = await fetch("/deploy?" + params.toString(), {
+      method: "POST",
+      headers: { "X-Deploy-Secret": secret },
+    });
+    const text = await res.text();
+    status.textContent = res.status + " " + text;
+  } catch (err) {
+    status.textContent = "request failed: " + err;
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
+"""
 
 
 def log(message: str) -> None:
@@ -75,7 +167,38 @@ def poll_loop() -> None:
         run_deploy(force=False)
 
 
+def deployable_service_names() -> list[str]:
+    if not REPO_DIR.is_dir():
+        return []
+    return sorted(
+        p.name
+        for p in (REPO_DIR / "services").iterdir()
+        if p.is_dir() and p.name not in SERVICE_EXCLUDE and (p / "compose.yaml").is_file()
+    )
+
+
 class Handler(BaseHTTPRequestHandler):
+    def do_GET(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path == "/":
+            body = PAGE_HTML.encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        if parsed.path == "/services":
+            body = json.dumps(deployable_service_names()).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        self.send_response(404)
+        self.end_headers()
+
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
         if parsed.path != "/deploy":
