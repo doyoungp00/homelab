@@ -44,7 +44,7 @@ services:
       # Homepage
       - homepage.group=Services
       - homepage.name=Code Server
-      - homepage.icon=code-server.png
+      - homepage.icon=vscode.png
       - "homepage.href=https://code.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
       - homepage.description=VS Code in the browser
       # Gatus
