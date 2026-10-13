@@ -14,14 +14,14 @@ services:
     image: jellyfin/jellyfin
     networks:
       - proxy
-    ports:
-      - 8096:8096/tcp
-      - 7359:7359/udp
-      # Optional - extra fonts to be used during transcoding with subtitle burn-in
-      # - type: bind
-      #   source: /path/to/fonts
-      #   target: /usr/local/share/fonts/custom
-      #   read_only: true
+    # ports:
+    #   - 8096:8096/tcp
+    #   - 7359:7359/udp # Jellyfin local discovery port
+    #   Optional - extra fonts to be used during transcoding with subtitle burn-in
+    #   - type: bind
+    #     source: /path/to/fonts
+    #     target: /usr/local/share/fonts/custom
+    #     read_only: true
     restart: unless-stopped
     # Optional - specify the uid and gid you would like Jellyfin to use instead of root
     user: "568:568"
