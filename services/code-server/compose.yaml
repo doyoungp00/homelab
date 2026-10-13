@@ -12,6 +12,7 @@ services:
       - XDG_DATA_HOME=/home/coder/.local/share
       - XDG_CONFIG_HOME=/home/coder/.config
       - DOTNET_CLI_TELEMETRY_OPTOUT=1
+      - CLAUDE_CONFIG_DIR=/home/coder/.claude
     healthcheck:
       interval: 30s
       retries: 3
@@ -33,6 +34,7 @@ services:
       - ${MNT_APPDATA:?MNT_APPDATA not set}/code-server/projects:/home/coder/project
       - ${MNT_APPDATA:?MNT_APPDATA not set}/code-server/nuget:/home/coder/.nuget
       - ${MNT_APPDATA:?MNT_APPDATA not set}/code-server/cargo-registry:/usr/local/cargo/registry
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/code-server/claude:/home/coder/.claude
     working_dir: /home/coder/project
     labels:
       # Traefik
