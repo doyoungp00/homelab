@@ -8,6 +8,14 @@ services:
       - path: ../shared/env/base.env
     # environment:
     #   TZ: Europe/Amsterdam
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      test:
+        - CMD-SHELL
+        - curl -fSs http://127.0.0.1:8123 || exit 1
+      timeout: 10s
     image: ghcr.io/home-assistant/home-assistant:stable
     networks:
       - proxy
