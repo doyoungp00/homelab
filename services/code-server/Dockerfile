@@ -2,8 +2,17 @@ FROM codercom/code-server:latest
 USER root
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential curl ca-certificates git libicu-dev \
+    build-essential curl ca-certificates git libicu-dev gpg \
+    python3 python3-pip python3-venv python3-dev python-is-python3 \
+    && mkdir -p -m 755 /etc/apt/keyrings \
+    && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list \
+    && apt-get update && apt-get install -y --no-install-recommends gh \
     && rm -rf /var/lib/apt/lists/*
+
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1
 
 # .NET SDK (installed outside $HOME on purpose)
 ENV DOTNET_ROOT=/usr/share/dotnet \

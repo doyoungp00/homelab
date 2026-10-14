@@ -29,12 +29,8 @@ services:
     user: "568:568"
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - ${MNT_APPDATA:?MNT_APPDATA not set}/code-server/config:/home/coder/.config
-      - ${MNT_APPDATA:?MNT_APPDATA not set}/code-server/data:/home/coder/.local/share/code-server
-      - ${MNT_APPDATA:?MNT_APPDATA not set}/code-server/projects:/home/coder/project
-      - ${MNT_APPDATA:?MNT_APPDATA not set}/code-server/nuget:/home/coder/.nuget
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/code-server/home:/home/coder
       - ${MNT_APPDATA:?MNT_APPDATA not set}/code-server/cargo-registry:/usr/local/cargo/registry
-      - ${MNT_APPDATA:?MNT_APPDATA not set}/code-server/claude:/home/coder/.claude
     working_dir: /home/coder/project
     labels:
       # Traefik
