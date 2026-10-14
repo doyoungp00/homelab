@@ -30,6 +30,12 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 RUN curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile default --no-modify-path \
     && chmod -R a+rwX /usr/local/rustup /usr/local/cargo
 
+# sops
+ARG SOPS_VERSION=3.13.3
+RUN curl -fsSL -o /usr/local/bin/sops \
+    "https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux.amd64" \
+    && chmod +x /usr/local/bin/sops
+
 USER root
 RUN mkdir -p /home/coder/.cache /home/coder/.dotnet /home/coder/.local/share \
     && chown -R 568:568 /home/coder
