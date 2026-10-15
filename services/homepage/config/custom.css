@@ -27,44 +27,45 @@ li:has(img.blur-md) .service-name {
 }
 
 /* Gatus iframe.
-   Two cards are named Gatus — the official widget and this iframe — so
-   data-name alone is ambiguous. Homepage passes the widget's `name` straight
-   through to the element, which makes it both unique and independent of the
-   URL (the old iframe[src="..."] selectors broke on any domain change). */
-li:has(iframe[name="gatus-overview"]) .service-title {
+   The card is named gatus-overview rather than Gatus precisely so this is
+   unambiguous — the official Gatus widget already owns that name. Homepage
+   renders data-name from the service name, so one name drives both the
+   config and the styling, and no URL appears here (the old
+   iframe[src="..."] selectors broke on any domain change). */
+li[data-name="gatus-overview"] .service-title {
     display: none;
 }
 
-li:has(iframe[name="gatus-overview"]) .service-block {
+li[data-name="gatus-overview"] .service-block {
     border-radius: 8px;
     overflow: hidden;
 }
 
-iframe[name="gatus-overview"] {
+li[data-name="gatus-overview"] iframe {
     height: 5400px;
     width: 100%;
 }
 
 @media (min-width: 640px) {
-    iframe[name="gatus-overview"] {
+    li[data-name="gatus-overview"] iframe {
         height: 6000px;
     }
 }
 
 @media (min-width: 768px) {
-    iframe[name="gatus-overview"] {
+    li[data-name="gatus-overview"] iframe {
         height: 4800px;
     }
 }
 
 @media (min-width: 1024px) {
-    iframe[name="gatus-overview"] {
+    li[data-name="gatus-overview"] iframe {
         height: 3600px;
     }
 }
 
 @media (min-width: 1280px) {
-    iframe[name="gatus-overview"] {
+    li[data-name="gatus-overview"] iframe {
         height: 2400px;
     }
 }
