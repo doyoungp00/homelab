@@ -333,6 +333,106 @@ class TestHomeAssistantHook:
         assert commands == []
 
 
+class TestHomepageHook:
+    """The real hook. The overlay path is the interesting one: it is the only
+    mechanism keeping machine-local config out of the repo, and nothing else
+    would catch it silently appending to the wrong file."""
+
+    def hook(self, tmp_path: Path, public: dict[str, str]):
+        service_dir = tmp_path / "homepage"
+        (service_dir / "config").mkdir(parents=True)
+        real = Path(__file__).resolve().parent.parent / "services/homepage/hooks.py"
+        (service_dir / "hooks.py").write_text(real.read_text())
+        for name, text in public.items():
+            (service_dir / "config" / name).write_text(text)
+        return service_dir
+
+    def test_copies_public_config_verbatim_when_no_overlay_exists(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        svc = self.hook(tmp_path, {"services.yaml": "---\n- Media:\n"})
+
+        assert fire(svc) is True
+        assert (appdata / "homepage/config/services.yaml").read_text() == "---\n- Media:\n"
+
+    def test_appends_the_local_overlay(self, tmp_path: Path, appdata: Path) -> None:
+        svc = self.hook(tmp_path, {"services.yaml": "---\n- Media:\n"})
+        overlay = appdata / "homepage/local/services.yaml"
+        overlay.parent.mkdir(parents=True)
+        overlay.write_text("- Surveillance:\n      - Living room:\n")
+
+        fire(svc)
+
+        result = (appdata / "homepage/config/services.yaml").read_text()
+        assert result == "---\n- Media:\n\n- Surveillance:\n      - Living room:\n"
+        # One YAML document, so Homepage sees both groups.
+        assert result.count("---") == 1
+
+    def test_overlay_is_per_file(self, tmp_path: Path, appdata: Path) -> None:
+        svc = self.hook(
+            tmp_path, {"services.yaml": "---\n- Media:\n", "custom.css": "a {}\n"}
+        )
+        overlay = appdata / "homepage/local/custom.css"
+        overlay.parent.mkdir(parents=True)
+        overlay.write_text("b {}\n")
+
+        fire(svc)
+
+        assert (appdata / "homepage/config/custom.css").read_text() == "a {}\n\nb {}\n"
+        assert (appdata / "homepage/config/services.yaml").read_text() == "---\n- Media:\n"
+
+    def test_copies_images_byte_exact(self, tmp_path: Path, appdata: Path) -> None:
+        svc = self.hook(tmp_path, {"settings.yaml": "---\n"})
+        jpeg = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01" + bytes(range(256))
+        (svc / "images").mkdir()
+        (svc / "images/bg.jpg").write_bytes(jpeg)
+
+        assert fire(svc) is True
+        assert (appdata / "homepage/images/bg.jpg").read_bytes() == jpeg
+        # No overlay is appended to a binary — that would corrupt it.
+        assert fire(svc) is False
+
+    def test_images_are_optional(self, tmp_path: Path, appdata: Path) -> None:
+        svc = self.hook(tmp_path, {"settings.yaml": "---\n"})
+
+        assert fire(svc) is True
+        assert not (appdata / "homepage/images").exists()
+
+    def test_leaves_nas_only_images_alone(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        svc = self.hook(tmp_path, {"settings.yaml": "---\n"})
+        (svc / "images").mkdir()
+        (svc / "images/bg.jpg").write_bytes(b"\xff\xd8public")
+        private = appdata / "homepage/images/private.jpg"
+        private.parent.mkdir(parents=True)
+        private.write_bytes(b"\xff\xd8private")
+
+        fire(svc)
+
+        assert private.read_bytes() == b"\xff\xd8private"
+
+    def test_is_a_no_op_once_everything_matches(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        svc = self.hook(tmp_path, {"services.yaml": "---\n", "custom.css": "a {}\n"})
+        fire(svc)
+
+        assert fire(svc) is False
+
+    def test_reports_a_change_even_when_an_earlier_file_already_matched(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        # `or` instead of `|=` would short-circuit here and leave custom.css
+        # unwritten, because services.yaml already matches.
+        svc = self.hook(tmp_path, {"aaa.yaml": "one\n", "zzz.css": "two\n"})
+        fire(svc)
+        (svc / "config/zzz.css").write_text("changed\n")
+
+        assert fire(svc) is True
+        assert (appdata / "homepage/config/zzz.css").read_text() == "changed\n"
+
+
 class TestDeployIntegration:
     def run_apply(
         self,

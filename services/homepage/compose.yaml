@@ -7,6 +7,21 @@ services:
         required: false
     environment:
       HOMEPAGE_ALLOWED_HOSTS: dash.${DOMAIN_LOCAL}
+      # Homepage substitutes {{HOMEPAGE_VAR_*}} into its YAML configs at parse
+      # time. These have to be declared here rather than by mounting an .env
+      # file, which is the documented way the substitution silently stops
+      # working.
+      HOMEPAGE_VAR_DOMAIN_LOCAL: ${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}
+      HOMEPAGE_VAR_HOST_IP: ${HOST_IP:?HOST_IP not set}
+      HOMEPAGE_VAR_LOCALE: ${HOMEPAGE_LOCALE:-en}
+      # The camera's room name and Frigate id. Kept in secret.sops.env so the
+      # card itself can stay in git — encrypted and backed up — rather than
+      # living only on the NAS.
+      HOMEPAGE_VAR_CAM1_NAME: ${HOMEPAGE_CAM1_NAME:?HOMEPAGE_CAM1_NAME not set}
+      HOMEPAGE_VAR_CAM1_ID: ${HOMEPAGE_CAM1_ID:?HOMEPAGE_CAM1_ID not set}
+      # Optional: the TrueNAS widget just fails to load while this is empty,
+      # which is the same as today's placeholder key.
+      HOMEPAGE_VAR_TRUENAS_KEY: ${HOMEPAGE_TRUENAS_KEY:-}
     image: ghcr.io/gethomepage/homepage:latest
     networks:
       - proxy

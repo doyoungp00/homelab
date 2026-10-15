@@ -1,0 +1,70 @@
+---
+# For configuration options and examples, please see:
+# https://gethomepage.dev/configs/settings/
+
+# Data sources
+# providers:
+#   openweathermap: openweathermapapikey
+#   weatherapi: weatherapiapikey
+
+# Page styles
+background:
+  # image: https://images.unsplash.com/photo-1502790671504-542ad42d5189?auto=format&fit=crop&w=2560&q=80
+  # Attribution in services/homepage/images/CREDITS.md — update it alongside
+  # any change to this file.
+  image: /images/alistair-macrobert-4TKFpJPnyU8-unsplash.jpg
+  # blur: sm # sm, "", md, xl... see https://tailwindcss.com/docs/backdrop-blur
+  # saturate: 75 # 0, 50, 100... see https://tailwindcss.com/docs/backdrop-saturate
+  # brightness: 75 # 0, 50, 75... see https://tailwindcss.com/docs/backdrop-brightness
+  # opacity: 100 # 0-100
+cardBlur: sm # xs, md, etc... see https://tailwindcss.com/docs/backdrop-blur
+useEqualHeights: true
+# statusStyle: "dot"
+
+# Page layout
+layout:
+  Surveillance:
+    tab: Services
+    header: false
+    style: row
+    columns: 3
+  Services:
+    tab: Services
+    style: row
+    columns: 3
+  Media:
+    tab: Services
+    style: row
+    columns: 3
+  Downloads:
+    tab: Services
+    style: row
+    columns: 3
+  Infra:
+    tab: Services
+    style: row
+    columns: 3
+
+  System:
+    tab: System
+    header: false
+    style: row
+    columns: 2
+    "OS & Processes":
+      header: false
+    "Charts":
+      header: false
+      style: row
+      columns: 3
+  Uptime:
+    tab: Health
+    header: false
+
+
+# Quick launch settings
+quicklaunch:
+  showSearchSuggestions: true
+  provider: custom
+  url: https://kagi.com/search?q=
+  target: _blank
+  suggestionUrl: https://kagi.com/api/autosuggest?q=

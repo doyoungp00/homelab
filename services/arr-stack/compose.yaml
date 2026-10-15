@@ -288,6 +288,11 @@ services:
       - homepage.widget.type=prowlarr
       - "homepage.widget.url=http://gluetun:9696"
       - homepage.widget.key=${PROWLARR_HOMEPAGE_KEY:?PROWLARR_HOMEPAGE_KEY not set}
+      # Homepage binds a discovered card to whichever container carried the
+      # label, so this one would report gluetun's health — green whenever the
+      # tunnel is up, even with prowlarr dead behind it. Labels are applied
+      # over that binding, so naming the real container here corrects it.
+      - homepage.container=prowlarr
       - gatus.enable=true
       - gatus.name=Prowlarr
       - "gatus.group=arr Stack"

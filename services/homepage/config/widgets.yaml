@@ -1,0 +1,24 @@
+---
+# locale is substituted from HOMEPAGE_VAR_LOCALE. Quoted because the value is
+# pasted in as raw text before the YAML is parsed, and a bare two-letter code
+# is one schema change away from being read as something other than a string.
+- datetime:
+      locale: "{{HOMEPAGE_VAR_LOCALE}}"
+      text_size: md
+      format:
+          year: 2-digit
+          month: 2-digit
+          day: 2-digit
+          weekday: short
+- datetime:
+      locale: "{{HOMEPAGE_VAR_LOCALE}}"
+      text_size: 3xl
+      format:
+          hour: 2-digit
+          minute: 2-digit
+          hourCycle: h23
+- openmeteo:
+      units: metric
+      cache: 10
+      format:
+          maximumFractionDigits: 1

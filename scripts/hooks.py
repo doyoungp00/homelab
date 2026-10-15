@@ -57,22 +57,33 @@ class Context:
     proxy_subnet: str
     run: Callable[..., str]
 
-    def write_if_changed(self, path: Path, content: str) -> bool:
-        """Write `content` to `path` only if it differs. True if written."""
-        if path.is_file() and path.read_text() == content:
-            return False
+    def write_if_changed(self, path: Path, content: str | bytes) -> bool:
+        """Write `content` to `path` only if it differs. True if written.
+
+        Pass bytes for a binary asset and str for generated text; the
+        comparison reads back in whichever mode it was handed.
+        """
+        binary = isinstance(content, bytes)
+        if path.is_file():
+            current = path.read_bytes() if binary else path.read_text()
+            if current == content:
+                return False
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content)
+        if binary:
+            path.write_bytes(content)
+        else:
+            path.write_text(content)
         return True
 
     def sync(self, src: str, dst: str | None = None) -> bool:
         """Repo owns this file: overwrite appdata's copy whenever it drifts.
 
         `src` is relative to the service directory, `dst` to its appdata
-        directory (defaulting to the same relative path).
+        directory (defaulting to the same relative path). Byte-exact, so it
+        works on images as readily as on YAML.
         """
         return self.write_if_changed(
-            self.appdata / (dst or src), (self.service_dir / src).read_text()
+            self.appdata / (dst or src), (self.service_dir / src).read_bytes()
         )
 
     def seed(self, src: str, dst: str | None = None) -> bool:
@@ -88,7 +99,7 @@ class Context:
         target = self.appdata / (dst or src)
         if target.exists():
             return False
-        return self.write_if_changed(target, (self.service_dir / src).read_text())
+        return self.write_if_changed(target, (self.service_dir / src).read_bytes())
 
 
 def appdata_root() -> Path:

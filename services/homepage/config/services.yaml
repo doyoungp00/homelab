@@ -1,0 +1,104 @@
+---
+# For configuration options and examples, please see:
+# https://gethomepage.dev/configs/services/
+#
+# {{HOMEPAGE_VAR_*}} is substituted by Homepage itself — a raw-text replace
+# over this file before it is parsed as YAML, which is why it works in keys as
+# well as values. An unset variable renders literally, so a missing one shows
+# up on the dashboard rather than failing quietly.
+- Surveillance:
+      - "{{HOMEPAGE_VAR_CAM1_NAME}}":
+            icon: frigate.png
+            href: https://frigate.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}/#{{HOMEPAGE_VAR_CAM1_ID}}
+            widget:
+                type: mjpeg
+                stream: https://frigate-stream.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}/api/{{HOMEPAGE_VAR_CAM1_ID}}?fps=24&h=480
+- Downloads:
+      - qBittorrent:
+            icon: qbittorrent.png
+            href: https://qbit.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
+            description: BitTorrent client
+            # Cards discovered from homepage.* labels are bound to the
+            # container they were read off, which is what produces the status
+            # badge. A card written by hand here has no such binding until
+            # server/container name one. `my-docker` is the key in docker.yaml.
+            server: my-docker
+            container: qbittorrent
+            widget:
+                type: qbittorrent
+                url: https://qbit.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
+- Media:
+      - Suwayomi:
+            icon: suwayomi.png
+            href: https://suwayomi.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
+            description: Read local & remote mangas
+            server: my-docker
+            container: suwayomi-server
+
+- System:
+      - "OS & Processes":
+            - Processes:
+                  widget:
+                      type: glances
+                      url: https://glances.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
+                      version: 4
+                      metric: process
+            - Containers:
+                  widget:
+                      type: glances
+                      url: https://glances.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
+                      version: 4
+                      metric: containers
+            - OS:
+                  href: https://nas.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
+                  widget:
+                      type: truenas
+                      url: https://{{HOMEPAGE_VAR_HOST_IP}}:444
+                      version: 2
+                      key: "{{HOMEPAGE_VAR_TRUENAS_KEY}}"
+                      enablePools: false
+                      nasType: scale
+                      highlight:
+                          alerts:
+                              numeric:
+                                  - level: danger
+                                    when: gt
+                                    value: 0
+      - "Charts":
+            - CPU:
+                  widget:
+                      type: glances
+                      url: https://glances.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
+                      version: 4
+                      metric: cpu
+            - Memory:
+                  widget:
+                      type: glances
+                      url: https://glances.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
+                      version: 4
+                      metric: memory
+            - Network:
+                  widget:
+                      type: glances
+                      url: https://glances.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
+                      version: 4
+                      metric: network:br0
+            - "CPU Temp":
+                  widget:
+                      type: glances
+                      url: https://glances.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
+                      version: 4
+                      metric: sensor:Package id 0
+
+- Uptime:
+      - gatus-overview:
+            widget:
+                type: iframe
+                # custom.css selects this iframe by name. Two cards are called
+                # Gatus — this one and the official widget — so the name is
+                # what keeps the styling off the wrong card.
+                name: gatus-overview
+                src: https://gatus.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
+                classes: w-full
+                allowScrolling: yes
+                showName: false

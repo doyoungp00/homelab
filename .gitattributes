@@ -1,3 +1,10 @@
-# Auto detect text files and perform LF normalization
 *.sops.* text eol=lf
 *.env text eol=lf
+
+# Dashboard backgrounds and icons. Nothing normalizes them today, but marking
+# them keeps a future `* text=auto` from mangling a JPEG into garbage.
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.webp binary
+*.ico binary
