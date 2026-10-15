@@ -1,0 +1,16 @@
+---
+# Starter config, written to ${MNT_APPDATA}/frigate/config/config.yaml only
+# when that file does not yet exist (see hooks.py). After the first deploy
+# Frigate and its UI own this file; edits here will NOT be applied, so change
+# the live one instead.
+auth:
+  failed_login_rate_limit: 1/second;5/minute;20/hour
+  # Must match PROXY_SUBNET in scripts/deploy.py, which is why that network is
+  # pinned. Without it Frigate sees Traefik's container IP as the client and
+  # rate-limits every user as if they were one attacker.
+  trusted_proxies:
+    - 172.16.25.0/24
+
+# Traefik terminates TLS; enabling it here breaks the route.
+tls:
+  enabled: false

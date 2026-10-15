@@ -13,6 +13,9 @@ services:
       - POLL_INTERVAL_SECONDS=900
       - SOPS_AGE_KEY_FILE=/run/secrets/age.key
       - WEBHOOK_SECRET=${WEBHOOK_SECRET:?WEBHOOK_SECRET not set}
+      # Where the appdata mount below lands, so scripts/hooks.py resolves a
+      # service's data the same way whether it runs in here or on the host.
+      - APPDATA_DIR=/appdata
     healthcheck:
       interval: 30s
       retries: 3
@@ -37,6 +40,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${MNT_APPDATA:?MNT_APPDATA not set}/deploy-agent/repo:/repo
       - ${MNT_APPDATA:?MNT_APPDATA not set}/deploy-agent/age.key:/run/secrets/age.key:ro
+      # Writable, because pre_deploy hooks place config under a service's
+      # appdata before its container starts. No privilege escalation — the
+      # docker socket above is already root-on-host — but it does widen what a
+      # buggy hook can damage from nothing to any service's data, which is why
+      # Context hands each hook only its own subdirectory.
+      - ${MNT_APPDATA:?MNT_APPDATA not set}:/appdata
     labels:
       # Traefik
       - traefik.enable=true
