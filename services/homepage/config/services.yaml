@@ -6,8 +6,16 @@
 # over this file before it is parsed as YAML, which is why it works in keys as
 # well as values. An unset variable renders literally, so a missing one shows
 # up on the dashboard rather than failing quietly.
+#
+# `weight: 0` on every card that shares a group with a label-discovered
+# service. Homepage sorts by weight and only falls back to name when weights
+# tie, but the two sources default differently: a container's labels give it
+# weight 0, while an entry here gets (position + 1) * 100. Without this, cards
+# defined in this file sink below every label-defined one regardless of name.
+# Zero everywhere puts the whole group back on the alphabetical tie-break.
 - Surveillance:
       - "{{HOMEPAGE_VAR_CAM1_NAME}}":
+            weight: 0
             icon: frigate.png
             href: https://frigate.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}/#{{HOMEPAGE_VAR_CAM1_ID}}
             widget:
@@ -20,6 +28,7 @@
       # builds at most one card per container, and Homepage only collects a
       # container's status when that container is labelled or is named here.
       - Prowlarr:
+            weight: 0
             icon: prowlarr.png
             href: https://prowlarr.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
             description: Manage indexers
@@ -32,6 +41,7 @@
                 url: http://gluetun:9696
                 key: "{{HOMEPAGE_VAR_PROWLARR_KEY}}"
       - qBittorrent:
+            weight: 0
             icon: qbittorrent.png
             href: https://qbit.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
             description: BitTorrent client
@@ -48,6 +58,7 @@
                 url: http://gluetun:8080
 - Media:
       - Suwayomi:
+            weight: 0
             icon: suwayomi.png
             href: https://suwayomi.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
             description: Read local & remote mangas
