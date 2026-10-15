@@ -43,7 +43,9 @@
             container: qbittorrent
             widget:
                 type: qbittorrent
-                url: https://qbit.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
+                # qbittorrent shares gluetun's network namespace, so its port
+                # is reachable at gluetun's name, not its own.
+                url: http://gluetun:8080
 - Media:
       - Suwayomi:
             icon: suwayomi.png
@@ -57,13 +59,13 @@
             - Processes:
                   widget:
                       type: glances
-                      url: https://glances.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
+                      url: http://{{HOMEPAGE_VAR_HOST_IP}}:61208
                       version: 4
                       metric: process
             - Containers:
                   widget:
                       type: glances
-                      url: https://glances.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
+                      url: http://{{HOMEPAGE_VAR_HOST_IP}}:61208
                       version: 4
                       metric: containers
             - OS:
@@ -85,25 +87,25 @@
             - CPU:
                   widget:
                       type: glances
-                      url: https://glances.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
+                      url: http://{{HOMEPAGE_VAR_HOST_IP}}:61208
                       version: 4
                       metric: cpu
             - Memory:
                   widget:
                       type: glances
-                      url: https://glances.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
+                      url: http://{{HOMEPAGE_VAR_HOST_IP}}:61208
                       version: 4
                       metric: memory
             - Network:
                   widget:
                       type: glances
-                      url: https://glances.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
+                      url: http://{{HOMEPAGE_VAR_HOST_IP}}:61208
                       version: 4
                       metric: network:br0
             - "CPU Temp":
                   widget:
                       type: glances
-                      url: https://glances.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
+                      url: http://{{HOMEPAGE_VAR_HOST_IP}}:61208
                       version: 4
                       metric: sensor:Package id 0
 
