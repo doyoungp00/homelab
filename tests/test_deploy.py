@@ -118,20 +118,39 @@ class TestApplyService:
 
 
 class TestEnsureNetwork:
-    def test_does_nothing_when_network_already_exists(
+    def test_leaves_an_existing_network_on_the_pinned_subnet_alone(
         self, deploy_paths: DeployModule, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         calls: list[list[str]] = []
 
-        def fake_run(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
-            calls.append(args)
-            return subprocess.CompletedProcess(args, 0)
+        def fake_run(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+            calls.append(list(args))
+            return subprocess.CompletedProcess(
+                args, 0, stdout=f"{deploy_paths.PROXY_SUBNET} ", stderr=""
+            )
 
         monkeypatch.setattr(deploy_paths.subprocess, "run", fake_run)
 
         deploy_paths.ensure_network("proxy")
 
-        assert calls == [["docker", "network", "inspect", "proxy"]]
+        assert calls[0] == ["docker", "network", "inspect", "proxy"]
+        assert not any("create" in call for call in calls)
+
+    def test_warns_when_an_existing_network_is_on_a_different_subnet(
+        self,
+        deploy_paths: DeployModule,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        def fake_run(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+            return subprocess.CompletedProcess(args, 0, stdout="10.1.2.0/24 ", stderr="")
+
+        monkeypatch.setattr(deploy_paths.subprocess, "run", fake_run)
+
+        deploy_paths.ensure_network("proxy")
+
+        out = capsys.readouterr().out
+        assert "WARNING" in out and "10.1.2.0/24" in out
 
     def test_creates_network_when_missing(
         self, deploy_paths: DeployModule, monkeypatch: pytest.MonkeyPatch
@@ -149,7 +168,7 @@ class TestEnsureNetwork:
 
         assert calls == [
             ["docker", "network", "inspect", "proxy"],
-            ["docker", "network", "create", "proxy"],
+            ["docker", "network", "create", "--subnet", deploy_paths.PROXY_SUBNET, "proxy"],
         ]
 
 

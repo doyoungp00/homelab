@@ -1,0 +1,428 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+from conftest import DeployModule
+
+from scripts import hooks
+
+
+@pytest.fixture(autouse=True)
+def clear_module_cache() -> None:
+    """hooks caches imported modules per path for the life of a deploy run.
+    Tests reuse tmp paths, so a stale entry would leak between them."""
+    hooks._MODULES.clear()
+
+
+@pytest.fixture
+def appdata(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    root = tmp_path / "appdata"
+    root.mkdir()
+    monkeypatch.setenv("APPDATA_DIR", str(root))
+    monkeypatch.delenv("MNT_APPDATA", raising=False)
+    return root
+
+
+def write_hook(service_dir: Path, body: str) -> Path:
+    service_dir.mkdir(parents=True, exist_ok=True)
+    (service_dir / "hooks.py").write_text(body)
+    return service_dir
+
+
+def fire(service_dir: Path, phase: str = "pre_deploy") -> bool:
+    return hooks.fire(phase, service_dir, proxy_subnet="10.9.0.0/24", run=lambda *a: "")
+
+
+class TestAppdataRoot:
+    def test_prefers_appdata_dir(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("APPDATA_DIR", "/appdata")
+        monkeypatch.setenv("MNT_APPDATA", "/mnt/host")
+
+        assert hooks.appdata_root() == Path("/appdata")
+
+    def test_falls_back_to_mnt_appdata_when_run_on_the_host(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("APPDATA_DIR", raising=False)
+        monkeypatch.setenv("MNT_APPDATA", "/mnt/host")
+
+        assert hooks.appdata_root() == Path("/mnt/host")
+
+    def test_raises_when_neither_is_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("APPDATA_DIR", raising=False)
+        monkeypatch.delenv("MNT_APPDATA", raising=False)
+
+        with pytest.raises(hooks.HookError, match="APPDATA_DIR"):
+            hooks.appdata_root()
+
+
+class TestFire:
+    def test_service_without_hooks_file_is_a_no_op(self, tmp_path: Path) -> None:
+        (tmp_path / "svc").mkdir()
+
+        assert fire(tmp_path / "svc") is False
+
+    def test_hooks_file_without_that_phase_is_a_no_op(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        svc = write_hook(tmp_path / "svc", "def post_deploy(ctx):\n    return True\n")
+
+        assert fire(svc, "pre_deploy") is False
+
+    def test_returns_whether_the_hook_reported_a_change(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        changed = write_hook(tmp_path / "a", "def pre_deploy(ctx):\n    return True\n")
+        unchanged = write_hook(tmp_path / "b", "def pre_deploy(ctx):\n    return False\n")
+
+        assert fire(changed) is True
+        assert fire(unchanged) is False
+
+    def test_a_hook_returning_none_counts_as_unchanged(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        svc = write_hook(tmp_path / "svc", "def pre_deploy(ctx):\n    pass\n")
+
+        assert fire(svc) is False
+
+    def test_hook_exception_becomes_a_hook_error_naming_service_and_phase(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        svc = write_hook(tmp_path / "svc", "def pre_deploy(ctx):\n    raise ValueError('nope')\n")
+
+        with pytest.raises(hooks.HookError, match=r"svc: pre_deploy raised ValueError: nope"):
+            fire(svc)
+
+    def test_import_error_becomes_a_hook_error(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        svc = write_hook(tmp_path / "svc", "import nonexistent_module_xyz\n")
+
+        with pytest.raises(hooks.HookError, match="failed to import"):
+            fire(svc)
+
+    def test_context_scopes_appdata_to_the_service(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        svc = write_hook(
+            tmp_path / "svc",
+            "def pre_deploy(ctx):\n"
+            "    (ctx.appdata / 'marker').parent.mkdir(parents=True, exist_ok=True)\n"
+            "    (ctx.appdata / 'marker').write_text(ctx.name + ' ' + ctx.proxy_subnet)\n"
+            "    return True\n",
+        )
+
+        fire(svc)
+
+        assert (appdata / "svc" / "marker").read_text() == "svc 10.9.0.0/24"
+
+    def test_module_is_imported_once_across_phases(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        svc = write_hook(
+            tmp_path / "svc",
+            "COUNTER = []\n"
+            "COUNTER.append(1)\n"
+            "def pre_deploy(ctx):\n    return False\n"
+            "def post_deploy(ctx):\n    return False\n",
+        )
+
+        fire(svc, "pre_deploy")
+        fire(svc, "post_deploy")
+
+        assert len(hooks.load(svc).COUNTER) == 1
+
+
+class TestContextHelpers:
+    def context(self, tmp_path: Path, appdata: Path) -> hooks.Context:
+        service_dir = tmp_path / "svc"
+        service_dir.mkdir(exist_ok=True)
+        return hooks.Context(
+            name="svc",
+            service_dir=service_dir,
+            appdata=appdata / "svc",
+            proxy_subnet="10.9.0.0/24",
+            run=lambda *a: "",
+        )
+
+    def test_write_if_changed_creates_missing_parents(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        ctx = self.context(tmp_path, appdata)
+
+        assert ctx.write_if_changed(ctx.appdata / "deep/nested/file", "hi") is True
+        assert (ctx.appdata / "deep/nested/file").read_text() == "hi"
+
+    def test_write_if_changed_is_false_for_identical_content(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        ctx = self.context(tmp_path, appdata)
+        ctx.write_if_changed(ctx.appdata / "f", "hi")
+
+        assert ctx.write_if_changed(ctx.appdata / "f", "hi") is False
+        assert ctx.write_if_changed(ctx.appdata / "f", "bye") is True
+
+    def test_sync_overwrites_drift(self, tmp_path: Path, appdata: Path) -> None:
+        ctx = self.context(tmp_path, appdata)
+        (ctx.service_dir / "acquis.yaml").write_text("from repo\n")
+        ctx.appdata.mkdir(parents=True)
+        (ctx.appdata / "acquis.yaml").write_text("edited by hand\n")
+
+        assert ctx.sync("acquis.yaml") is True
+        assert (ctx.appdata / "acquis.yaml").read_text() == "from repo\n"
+        assert ctx.sync("acquis.yaml") is False
+
+    def test_sync_can_rename(self, tmp_path: Path, appdata: Path) -> None:
+        ctx = self.context(tmp_path, appdata)
+        (ctx.service_dir / "src.yaml").write_text("x\n")
+
+        assert ctx.sync("src.yaml", "nested/dst.yaml") is True
+        assert (ctx.appdata / "nested/dst.yaml").read_text() == "x\n"
+
+    def test_seed_writes_only_when_target_is_absent(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        ctx = self.context(tmp_path, appdata)
+        (ctx.service_dir / "data").mkdir()
+        (ctx.service_dir / "data/config.yaml").write_text("starter\n")
+
+        assert ctx.seed("data/config.yaml", "config/config.yaml") is True
+        (ctx.appdata / "config/config.yaml").write_text("user edited\n")
+
+        assert ctx.seed("data/config.yaml", "config/config.yaml") is False
+        assert (ctx.appdata / "config/config.yaml").read_text() == "user edited\n"
+
+
+class TestHomeAssistantHook:
+    """The real hook, not a stand-in: its fresh-host branch is the one that
+    only ever runs once per NAS rebuild, so it gets no exercise in practice."""
+
+    def hook(self, tmp_path: Path, appdata: Path):
+        service_dir = tmp_path / "homeassistant"
+        service_dir.mkdir()
+        real = Path(__file__).resolve().parent.parent / "services/homeassistant/hooks.py"
+        (service_dir / "hooks.py").write_text(real.read_text())
+        return service_dir
+
+    def storage(self, appdata: Path) -> Path:
+        return appdata / "homeassistant/config/.storage/http"
+
+    def test_seeds_a_usable_storage_key_when_ha_has_never_booted(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        svc = self.hook(tmp_path, appdata)
+
+        assert fire(svc) is True
+
+        data = json.loads(self.storage(appdata).read_text())
+        assert data["key"] == "http"
+        assert data["data"]["stable"]["trusted_proxies"] == ["10.9.0.0/24"]
+        assert data["data"]["stable"]["use_x_forwarded_for"] is True
+        # Pinned so HA 2026.8's port-80 default can't break the Traefik route.
+        assert data["data"]["stable"]["server_port"] == 8123
+        # Without this HA's migration pass overwrites the above on first boot.
+        assert data["data"]["yaml_migration_done"] is True
+
+    def test_seeded_host_needs_no_second_deploy(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        svc = self.hook(tmp_path, appdata)
+        fire(svc)
+
+        # The merge branch now sees its own seed and finds nothing to do —
+        # the bug was that this took two deploys to reach.
+        assert fire(svc) is False
+
+    def test_merges_into_an_existing_file_without_touching_other_keys(
+        self, tmp_path: Path, appdata: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        svc = self.hook(tmp_path, appdata)
+        path = self.storage(appdata)
+        path.parent.mkdir(parents=True)
+        path.write_text(
+            json.dumps(
+                {
+                    "version": 2,
+                    "key": "http",
+                    "data": {
+                        "stable": {"server_port": 8123, "ssl_profile": "modern"},
+                        "pending": None,
+                    },
+                }
+            )
+        )
+
+        assert hooks.fire(
+            "pre_deploy", svc, proxy_subnet="10.9.0.0/24", run=lambda *a: ""
+        ) is True
+
+        stable = json.loads(path.read_text())["data"]["stable"]
+        assert stable["trusted_proxies"] == ["10.9.0.0/24"]
+        assert stable["ssl_profile"] == "modern"
+
+    def test_does_nothing_when_already_correct(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        svc = self.hook(tmp_path, appdata)
+        path = self.storage(appdata)
+        path.parent.mkdir(parents=True)
+        path.write_text(
+            json.dumps(
+                {
+                    "data": {
+                        "stable": {
+                            "use_x_forwarded_for": True,
+                            "trusted_proxies": ["10.9.0.0/24"],
+                        }
+                    }
+                }
+            )
+        )
+        before = path.read_text()
+
+        assert fire(svc) is False
+        assert path.read_text() == before
+
+    def test_stops_the_container_before_writing_over_a_live_file(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        svc = self.hook(tmp_path, appdata)
+        path = self.storage(appdata)
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps({"data": {"stable": {"server_port": 8123}}}))
+
+        commands: list[tuple[str, ...]] = []
+
+        def fake_run(*args: str) -> str:
+            commands.append(args)
+            return "container-id" if args[1] == "ps" else ""
+
+        hooks.fire("pre_deploy", svc, proxy_subnet="10.9.0.0/24", run=fake_run)
+
+        assert commands[-1] == ("docker", "stop", "homeassistant")
+
+    def test_does_not_stop_a_container_it_is_not_changing(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        svc = self.hook(tmp_path, appdata)
+        path = self.storage(appdata)
+        path.parent.mkdir(parents=True)
+        path.write_text(
+            json.dumps(
+                {
+                    "data": {
+                        "stable": {
+                            "use_x_forwarded_for": True,
+                            "trusted_proxies": ["10.9.0.0/24"],
+                        }
+                    }
+                }
+            )
+        )
+
+        commands: list[tuple[str, ...]] = []
+        hooks.fire(
+            "pre_deploy",
+            svc,
+            proxy_subnet="10.9.0.0/24",
+            run=lambda *a: commands.append(a) or "",
+        )
+
+        assert commands == []
+
+
+class TestDeployIntegration:
+    def run_apply(
+        self,
+        deploy_paths: DeployModule,
+        monkeypatch: pytest.MonkeyPatch,
+        hook_body: str | None,
+    ) -> list[list[str]]:
+        calls: list[list[str]] = []
+        monkeypatch.setattr(
+            deploy_paths.subprocess, "run", lambda args, **kw: calls.append(args)
+        )
+
+        service_dir = deploy_paths.SERVICES_DIR / "svc"
+        service_dir.mkdir(parents=True)
+        (service_dir / "compose.yaml").write_text("services:\n  svc:\n    image: foo\n")
+        if hook_body is not None:
+            (service_dir / "hooks.py").write_text(hook_body)
+
+        deploy_paths.apply_service(service_dir)
+        return calls
+
+    def test_changed_pre_deploy_forces_recreate_of_an_image_service(
+        self, deploy_paths: DeployModule, monkeypatch: pytest.MonkeyPatch, appdata: Path
+    ) -> None:
+        calls = self.run_apply(
+            deploy_paths, monkeypatch, "def pre_deploy(ctx):\n    return True\n"
+        )
+
+        assert "--force-recreate" in calls[-1]
+
+    def test_unchanged_pre_deploy_leaves_the_container_alone(
+        self, deploy_paths: DeployModule, monkeypatch: pytest.MonkeyPatch, appdata: Path
+    ) -> None:
+        calls = self.run_apply(
+            deploy_paths, monkeypatch, "def pre_deploy(ctx):\n    return False\n"
+        )
+
+        assert "--force-recreate" not in calls[-1]
+
+    def test_pre_deploy_runs_before_compose_and_post_deploy_after(
+        self, deploy_paths: DeployModule, monkeypatch: pytest.MonkeyPatch, appdata: Path
+    ) -> None:
+        order: list[str] = []
+        monkeypatch.setattr(
+            deploy_paths.subprocess,
+            "run",
+            lambda args, **kw: order.append(" ".join(args[4:6])),
+        )
+        service_dir = deploy_paths.SERVICES_DIR / "svc"
+        service_dir.mkdir(parents=True)
+        (service_dir / "compose.yaml").write_text("services:\n  svc:\n    image: foo\n")
+        (service_dir / "hooks.py").write_text(
+            f"import pathlib\n"
+            f"LOG = pathlib.Path({str(deploy_paths.REPO_ROOT / 'order')!r})\n"
+            "def pre_deploy(ctx):\n"
+            "    LOG.write_text('pre\\n')\n"
+            "    return False\n"
+            "def post_deploy(ctx):\n"
+            "    LOG.write_text(LOG.read_text() + 'post\\n')\n"
+            "    return False\n"
+        )
+
+        # Record hook ordering relative to the compose calls by appending to
+        # the same list the subprocess stub writes to.
+        original = deploy_paths.hooks.fire
+
+        def traced(phase: str, *args: object, **kwargs: object) -> bool:
+            order.append(phase)
+            return original(phase, *args, **kwargs)
+
+        monkeypatch.setattr(deploy_paths.hooks, "fire", traced)
+        deploy_paths.apply_service(service_dir)
+
+        assert order == ["pre_deploy", "pull --quiet", "up -d", "post_deploy"]
+
+    def test_failing_hook_skips_compose_entirely(
+        self, deploy_paths: DeployModule, monkeypatch: pytest.MonkeyPatch, appdata: Path
+    ) -> None:
+        calls: list[list[str]] = []
+        monkeypatch.setattr(
+            deploy_paths.subprocess, "run", lambda args, **kw: calls.append(args)
+        )
+        service_dir = deploy_paths.SERVICES_DIR / "svc"
+        service_dir.mkdir(parents=True)
+        (service_dir / "compose.yaml").write_text("services:\n  svc:\n    image: foo\n")
+        (service_dir / "hooks.py").write_text(
+            "def pre_deploy(ctx):\n    raise RuntimeError('bad config')\n"
+        )
+
+        with pytest.raises(hooks.HookError):
+            deploy_paths.apply_service(service_dir)
+
+        assert calls == []

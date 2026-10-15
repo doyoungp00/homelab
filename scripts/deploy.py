@@ -4,6 +4,9 @@ For each service directory under services/ whose files changed between the
 previously-deployed commit and the fetched remote, runs `docker compose up -d`
 to apply it. Shared env changes (services/shared/) redeploy every service.
 
+A service that needs config placed under its appdata mount before (or after)
+that happens can ship a `hooks.py` beside its compose.yaml; see scripts/hooks.py.
+
 Usage (run from the repo root):
   export SOPS_AGE_KEY_FILE=/path/to/age.key
   python -m scripts.deploy                      # only touch services whose directory changed
@@ -26,12 +29,20 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import decrypt_secrets
+from . import decrypt_secrets, hooks
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SERVICES_DIR = REPO_ROOT / "services"
 LOCK_FILE = Path(os.environ.get("DEPLOY_LOCK_FILE", "/tmp/homelab-deploy.lock"))
 BRANCH = os.environ.get("BRANCH", "main")
+
+# Pinned rather than left to Docker's default address pool, because several
+# services have to name it in their own config: Frigate's and Home Assistant's
+# trusted_proxies, so they read X-Forwarded-For from Traefik instead of
+# treating every user as one client. Letting Docker choose would make that a
+# value three configs have to rediscover at deploy time; pinning makes it a
+# constant they can simply state.
+PROXY_SUBNET = "172.16.25.0/24"
 
 
 class DeployError(RuntimeError):
@@ -65,8 +76,15 @@ def changed_service_names(local: str, remote: str) -> set[str]:
     return names
 
 
+def fire_hook(phase: str, service_dir: Path) -> bool:
+    return hooks.fire(phase, service_dir, proxy_subnet=PROXY_SUBNET, run=run)
+
+
 def apply_service(service_dir: Path) -> None:
     log(f"applying {service_dir.name}")
+    # Before `up`, so a hook can create the bind mount's source directory and
+    # seed config the container reads at startup.
+    hook_changed = fire_hook("pre_deploy", service_dir)
     subprocess.run(
         [
             "docker",
@@ -87,7 +105,11 @@ def apply_service(service_dir: Path) -> None:
     # reason. Scope it to only the services that actually need it.
     has_build = "build:" in (service_dir / "compose.yaml").read_text()
     up_args = ["--remove-orphans", "--build"]
-    if has_build:
+    # A pre_deploy hook that rewrote config needs the same treatment for a
+    # related reason: the hash covers the compose config, not the files a hook
+    # touched, so new config would sit on disk unread until something else
+    # happened to change.
+    if has_build or hook_changed:
         up_args.append("--force-recreate")
     subprocess.run(
         [
@@ -102,6 +124,7 @@ def apply_service(service_dir: Path) -> None:
         cwd=REPO_ROOT,
         check=True,
     )
+    fire_hook("post_deploy", service_dir)
 
 
 def prune_images() -> None:
@@ -121,8 +144,31 @@ def ensure_network(name: str) -> None:
         ["docker", "network", "inspect", name], capture_output=True
     )
     if exists.returncode != 0:
-        log(f"creating shared network {name}")
-        subprocess.run(["docker", "network", "create", name], check=True)
+        log(f"creating shared network {name} on {PROXY_SUBNET}")
+        subprocess.run(
+            ["docker", "network", "create", "--subnet", PROXY_SUBNET, name], check=True
+        )
+        return
+
+    # Docker won't change an existing network's subnet, so a network created
+    # before PROXY_SUBNET was pinned (or pinned to something else) keeps its
+    # own range while hooks go on writing the constant into trusted_proxies.
+    # That desyncs silently and surfaces as odd auth failures, so say so.
+    # Fixing it means recreating the network by hand, which disconnects every
+    # container once — not something to do behind the operator's back.
+    actual = run(
+        "docker",
+        "network",
+        "inspect",
+        name,
+        "-f",
+        "{{range .IPAM.Config}}{{.Subnet}} {{end}}",
+    ).split()
+    if PROXY_SUBNET not in actual:
+        log(
+            f"WARNING: network {name} is on {' '.join(actual) or '<none>'}, not the "
+            f"pinned {PROXY_SUBNET} — trusted_proxies written by hooks will be wrong"
+        )
 
 
 SELF_SERVICE_NAME = "deploy-agent"
@@ -191,6 +237,9 @@ def deploy(force: bool, only_service: str | None = None) -> int:
                 file=sys.stderr,
             )
             return 1
+        except hooks.HookError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
         prune_images()
         log(f"deploy complete at {remote} (service={only_service})")
         return 0
@@ -206,6 +255,13 @@ def deploy(force: bool, only_service: str | None = None) -> int:
                     f"(exit {exc.returncode})",
                     file=sys.stderr,
                 )
+                failed = True
+            # A failed pre_deploy means `up` never ran, so the service keeps
+            # running its old config rather than starting on a half-written
+            # one. Isolated like any other service failure: the rest of the
+            # stack still deploys.
+            except hooks.HookError as exc:
+                print(f"ERROR: {exc}", file=sys.stderr)
                 failed = True
 
     prune_images()
