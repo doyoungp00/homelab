@@ -271,28 +271,22 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - ${MNT_APPDATA:?MNT_APPDATA not set}/gluetun:/gluetun
     labels:
-      # Prowlarr's Traefik/Homepage/Gatus - physically on gluetun's labels
-      # since prowlarr (network_mode: service:gluetun) has no network
-      # identity of its own for Traefik to discover.
+      # Prowlarr's Traefik/Gatus - physically on gluetun's labels since
+      # prowlarr (network_mode: service:gluetun) has no network identity of
+      # its own for Traefik to discover.
+      # No homepage.* here either: Homepage only collects a container's status
+      # if that same container carries homepage labels, or if services.yaml
+      # names it via container:. A card defined by gluetun's labels therefore
+      # reports gluetun's health, and a homepage.container=prowlarr label
+      # retargets the card onto a status that was never collected — the card
+      # then reads NOT FOUND. Prowlarr's card lives in homepage's
+      # services.yaml alongside qBittorrent's and Suwayomi's.
       - traefik.enable=true
       - traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.prowlarr.tls=true
       - traefik.http.routers.prowlarr.tls.certresolver=cloudflare
       - traefik.http.routers.prowlarr.service=prowlarr
       - traefik.http.services.prowlarr.loadbalancer.server.port=9696
-      - homepage.group=Downloads
-      - homepage.name=Prowlarr
-      - homepage.icon=prowlarr.png
-      - "homepage.href=https://prowlarr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
-      - homepage.description=Manage indexers
-      - homepage.widget.type=prowlarr
-      - "homepage.widget.url=http://gluetun:9696"
-      - homepage.widget.key=${PROWLARR_HOMEPAGE_KEY:?PROWLARR_HOMEPAGE_KEY not set}
-      # Homepage binds a discovered card to whichever container carried the
-      # label, so this one would report gluetun's health — green whenever the
-      # tunnel is up, even with prowlarr dead behind it. Labels are applied
-      # over that binding, so naming the real container here corrects it.
-      - homepage.container=prowlarr
       - gatus.enable=true
       - gatus.name=Prowlarr
       - "gatus.group=arr Stack"

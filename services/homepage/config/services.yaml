@@ -14,6 +14,23 @@
                 type: mjpeg
                 stream: https://frigate-stream.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}/api/{{HOMEPAGE_VAR_CAM1_ID}}?fps=24&h=480
 - Downloads:
+      # Prowlarr, qBittorrent and Suwayomi all run with
+      # network_mode: service:gluetun, so their Traefik and Gatus labels sit
+      # on the gluetun container. Their Homepage cards can't: label discovery
+      # builds at most one card per container, and Homepage only collects a
+      # container's status when that container is labelled or is named here.
+      - Prowlarr:
+            icon: prowlarr.png
+            href: https://prowlarr.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}
+            description: Manage indexers
+            server: my-docker
+            container: prowlarr
+            widget:
+                type: prowlarr
+                # gluetun owns the network namespace, so that is where
+                # prowlarr's port is reachable.
+                url: http://gluetun:9696
+                key: "{{HOMEPAGE_VAR_PROWLARR_KEY}}"
       - qBittorrent:
             icon: qbittorrent.png
             href: https://qbit.{{HOMEPAGE_VAR_DOMAIN_LOCAL}}

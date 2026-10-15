@@ -22,6 +22,10 @@ services:
       # Optional: the TrueNAS widget just fails to load while this is empty,
       # which is the same as today's placeholder key.
       HOMEPAGE_VAR_TRUENAS_KEY: ${HOMEPAGE_TRUENAS_KEY:-}
+      # Moved out of arr-stack with Prowlarr's card. Required rather than
+      # defaulted, so relocating the secret can't silently leave a widget
+      # that works today showing an error instead.
+      HOMEPAGE_VAR_PROWLARR_KEY: ${HOMEPAGE_PROWLARR_KEY:?HOMEPAGE_PROWLARR_KEY not set}
     image: ghcr.io/gethomepage/homepage:latest
     networks:
       - proxy
