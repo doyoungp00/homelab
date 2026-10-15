@@ -1,0 +1,20 @@
+---
+# Traefik's access log, read straight off the container's stdout rather than a
+# shared log file: Docker's json-file driver already rotates it (see the
+# `logging:` block on the traefik service), so there is no unbounded file and
+# no third volume shared between the two compose projects.
+source: docker
+container_name:
+  - traefik
+labels:
+  type: traefik
+---
+# AppSec (WAF) listener. The Traefik bouncer plugin POSTs each request here for
+# inspection before it reaches the backend. Must listen on 0.0.0.0, not
+# 127.0.0.1, to be reachable from the traefik container.
+source: appsec
+listen_addr: 0.0.0.0:7422
+appsec_configs:
+  - crowdsecurity/appsec-default
+labels:
+  type: appsec

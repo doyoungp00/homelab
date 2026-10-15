@@ -1,0 +1,64 @@
+---
+services:
+  crowdsec:
+    container_name: crowdsec
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      # Installed at every boot. /etc/crowdsec is not persisted, so the hub
+      # state is declarative: what is listed here is what is running.
+      #   traefik                  -> parsers + scenarios for the access log
+      #   appsec-virtual-patching  -> CVE/exploit rules (the WAF's teeth)
+      #   appsec-generic-rules     -> generic SQLi/XSS/path-traversal rules
+      - COLLECTIONS=crowdsecurity/traefik crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules
+      # Fixes the LAPI machine name so repeated boots update one machine
+      # instead of registering a new random one each time.
+      - CUSTOM_HOSTNAME=crowdsec
+      # Registers the Traefik plugin's bouncer at startup (idempotent). Same
+      # value the plugin presents, hence a shared secret rather than two.
+      - BOUNCER_KEY_TRAEFIK=${CROWDSEC_LAPI_KEY:?CROWDSEC_LAPI_KEY not set}
+    healthcheck:
+      interval: 30s
+      retries: 3
+      # First boot downloads the hub collections before LAPI answers.
+      start_period: 120s
+      test:
+        - CMD
+        - cscli
+        - lapi
+        - status
+      timeout: 10s
+    image: crowdsecurity/crowdsec:latest
+    networks:
+      - proxy
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      # Read-only: this is an acquisition source (traefik's log stream), not
+      # a control channel.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Decisions, alerts and the ban list. The only state worth keeping —
+      # losing it means forgetting who is currently banned, nothing more.
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/crowdsec/data:/var/lib/crowdsec/data
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/crowdsec/acquis.yaml:/etc/crowdsec/acquis.d/homelab.yaml
+    labels:
+      # No Traefik router: LAPI (8080) and AppSec (7422) are reached over the
+      # proxy network by the bouncer plugin only, never from a browser.
+      # Homepage
+      - homepage.group=Infra
+      - homepage.name=CrowdSec
+      - homepage.icon=crowdsec.png
+      - homepage.description=Intrusion detection and WAF for Traefik
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=CrowdSec LAPI
+      - gatus.group=Infra
+      - "gatus.url=http://crowdsec:8080/health"
+      - gatus.interval=5m
+      - 'gatus.conditions=["[STATUS] == 200"]'
+
+networks:
+  proxy:
+    external: true

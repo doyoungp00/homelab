@@ -22,6 +22,16 @@ services:
       - "--entrypoints.websecure.http.encodedCharacters.allowEncodedSlash=true"
       - "--entrypoints.websecure.http.encodedCharacters.allowEncodedQuestionMark=true"
       - "--entrypoints.websecure.http.encodedCharacters.allowEncodedPercent=true"
+      # CrowdSec feeds on the access log; crowdsec's docker acquisition reads
+      # it off this container's stdout, so no shared log volume is needed.
+      - "--accesslog=true"
+      - "--accesslog.format=json"
+      - "--experimental.plugins.bouncer.modulename=github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
+      - "--experimental.plugins.bouncer.version=v1.7.1"
+      # Applied at the entrypoint, not per-router: the invariant is "everything
+      # reachable from outside is inspected", and 115 router labels is 115
+      # chances to forget one on the next service added.
+      - "--entrypoints.websecure.http.middlewares=crowdsec@docker"
     env_file:
       - path: .env
         required: false
@@ -45,10 +55,21 @@ services:
       - "443:443"
       # - "8080:8080"
     restart: unless-stopped
+    # Access logs go to stdout for crowdsec to read, so cap them here —
+    # otherwise the json-file driver grows without bound.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${MNT_APPDATA:?MNT_APPDATA not set}/traefik/acme.json:/etc/traefik/acme.json
+      # Plugins are fetched from GitHub at startup. Persisting the cache keeps
+      # a GitHub outage from stopping the one container the whole stack is
+      # behind.
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/traefik/plugins-storage:/plugins-storage
     labels:
       # Traefik
       - traefik.enable=true
@@ -62,6 +83,37 @@ services:
       - traefik.http.routers.truenas.tls.certresolver=cloudflare
       - traefik.http.routers.truenas.service=truenas
       - "traefik.http.services.truenas.loadbalancer.server.url=http://${HOST_IP:?HOST_IP not set}:81"
+      # CrowdSec bouncer + AppSec WAF, wired into websecure above.
+      # Declared on Traefik's own labels rather than on the crowdsec
+      # container so the middleware still resolves when crowdsec is down or
+      # not yet deployed — otherwise every route 404s on a missing middleware.
+      - traefik.http.middlewares.crowdsec.plugin.bouncer.enabled=true
+      - "traefik.http.middlewares.crowdsec.plugin.bouncer.crowdseclapikey=${CROWDSEC_LAPI_KEY:?CROWDSEC_LAPI_KEY not set}"
+      - traefik.http.middlewares.crowdsec.plugin.bouncer.crowdseclapihost=crowdsec:8080
+      # stream mode keeps a local copy of the decision list and refreshes it
+      # in the background: one LAPI call a minute instead of one per request,
+      # and a crowdsec outage degrades to "no new bans" rather than 403.
+      - traefik.http.middlewares.crowdsec.plugin.bouncer.crowdsecmode=stream
+      # Compose projects are per-directory, so Traefik cannot depends_on
+      # crowdsec. Don't hold traffic waiting for the first stream sync.
+      - traefik.http.middlewares.crowdsec.plugin.bouncer.streamstartupblock=false
+      # The WAF. Fails open for the same reason: an AppSec hiccup must not
+      # take down a stack whose front door this is.
+      - traefik.http.middlewares.crowdsec.plugin.bouncer.crowdsecappsecenabled=true
+      - traefik.http.middlewares.crowdsec.plugin.bouncer.crowdsecappsechost=crowdsec:7422
+      - traefik.http.middlewares.crowdsec.plugin.bouncer.crowdsecappsecunreachableblock=false
+      - traefik.http.middlewares.crowdsec.plugin.bouncer.crowdsecappsecfailureblock=false
+      # LAN and WireGuard clients skip both bouncer and WAF. The admin UIs
+      # behind this proxy are exactly what trips WAF false positives, and
+      # being locked out of the stack from inside the house is the worse
+      # failure. Narrow this if the LAN is smaller than the RFC1918 blocks.
+      - "traefik.http.middlewares.crowdsec.plugin.bouncer.clienttrustedips=127.0.0.1/32,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+      # If cloud./jellyfin./navidrome. are proxied through Cloudflare (orange
+      # cloud), the client IP arrives in X-Forwarded-For behind a Cloudflare
+      # edge IP. Without these two, CrowdSec bans Cloudflare and all three
+      # public services go dark. See https://www.cloudflare.com/ips/
+      # - "--entrypoints.websecure.forwardedHeaders.trustedIPs=<cloudflare ranges>"  # (command:, not a label)
+      # - "traefik.http.middlewares.crowdsec.plugin.bouncer.forwardedheaderstrustedips=<cloudflare ranges>"
       # Homepage
       - homepage.group=Infra
       - homepage.name=Traefik
