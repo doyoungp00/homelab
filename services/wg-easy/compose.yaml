@@ -24,14 +24,11 @@ services:
       - INIT_DNS=${HOST_IP:?HOST_IP not set}
       - DISABLE_IPV6=true
     image: ghcr.io/wg-easy/wg-easy:15
+    # Single network on purpose: wg-easy's MASQUERADE hook is pinned to eth0,
+    # and with a second network Docker is free to put the default route on
+    # the other interface, which silently breaks VPN client traffic.
     networks:
-      wg:
-        ipv4_address: 10.42.42.42
-        ipv6_address: fdcc:ad94:bacf:61a3::2a
-        interface_name: eth0
-        gw_priority: 100
-      proxy:
-        interface_name: eth1 
+      - proxy
     ports:
       - 51820:51820/udp
       # - "51821:51821" # Web UI now reached via Traefik instead
@@ -76,13 +73,5 @@ services:
       - 'gatus.conditions=["[STATUS] == 200"]'
 
 networks:
-  wg:
-    driver: bridge
-    enable_ipv6: true
-    ipam:
-      config:
-        - subnet: 10.42.42.0/24
-        - subnet: fdcc:ad94:bacf:61a3::/64
-      driver: default
   proxy:
     external: true
