@@ -1,0 +1,23 @@
+# What it's for
+
+Gatus is a health and uptime dashboard that checks each service on an interval.
+
+[Check out the project](https://github.com/TwiN/gatus)
+
+This stack also runs a custom **gatus-generator** container. Gatus only reads a static `config.yaml`, so the generator builds that file from `gatus.*` labels on running containers every 30 seconds. See the docstring in `generator.py` for the full label format.
+
+# Why it's needed
+
+1. It shows at a glance which services are down or slow, with uptime history, and feeds the Gatus widget on Homepage.
+
+2. With the generator, adding monitoring for a service is just a few labels in its `compose.yaml`, the same way Traefik and Homepage are configured.
+
+# Known caveats
+
+1. `config.yaml` is regenerated constantly. Manual edits are overwritten within 30 seconds.
+
+2. The generator only lists running containers. A stopped container disappears from Gatus instead of showing as down.
+
+3. Checks go directly to containers over the `proxy` network, not through Traefik. A broken route or certificate won't be caught.
+
+4. Docker labels can't repeat a key. A container that serves several services (e.g. via `network_mode: service:gluetun`) needs indexed labels like `gatus[1].url`.
