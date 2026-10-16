@@ -25,7 +25,7 @@ services:
       # Moved out of arr-stack with Prowlarr's card. Required rather than
       # defaulted, so relocating the secret can't silently leave a widget
       # that works today showing an error instead.
-      HOMEPAGE_VAR_PROWLARR_KEY: ${HOMEPAGE_PROWLARR_KEY:?HOMEPAGE_PROWLARR_KEY not set}
+      HOMEPAGE_VAR_PROWLARR_KEY: ${HOMEPAGE_PROWLARR_KEY:-}
     image: ghcr.io/gethomepage/homepage:latest
     networks:
       - proxy

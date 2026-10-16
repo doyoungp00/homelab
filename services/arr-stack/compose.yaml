@@ -40,7 +40,7 @@ services:
       - homepage.description=Fetch and manage subtitles
       - homepage.widget.type=bazarr
       - "homepage.widget.url=http://bazarr:6767"
-      - homepage.widget.key=${BAZARR_HOMEPAGE_KEY:?BAZARR_HOMEPAGE_KEY not set}
+      - homepage.widget.key=${BAZARR_HOMEPAGE_KEY:-}
       # Gatus
       - gatus.enable=true
       - gatus.name=Bazarr
@@ -165,7 +165,7 @@ services:
       - homepage.description=Fetch and manage movies
       - homepage.widget.type=radarr
       - "homepage.widget.url=http://radarr:7878"
-      - homepage.widget.key=${RADARR_HOMEPAGE_KEY:?RADARR_HOMEPAGE_KEY not set}
+      - homepage.widget.key=${RADARR_HOMEPAGE_KEY:-}
       # Gatus
       - gatus.enable=true
       - gatus.name=Radarr
@@ -214,7 +214,7 @@ services:
       - homepage.description=Fetch and manage TV series
       - homepage.widget.type=sonarr
       - "homepage.widget.url=http://sonarr:8989"
-      - homepage.widget.key=${SONARR_HOMEPAGE_KEY:?SONARR_HOMEPAGE_KEY not set}
+      - homepage.widget.key=${SONARR_HOMEPAGE_KEY:-}
       # Gatus
       - gatus.enable=true
       - gatus.name=Sonarr
