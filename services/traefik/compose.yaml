@@ -3,7 +3,13 @@ services:
   traefik:
     container_name: traefik
     command:
-      - "--api.insecure=true"
+      # Dashboard/API only via the `traefik` router below (basic auth), never
+      # on :8080 — api.insecure would hand every container on `proxy` the full
+      # config, CROWDSEC_LAPI_KEY included.
+      - "--api.dashboard=true"
+      # /ping on the internal `traefik` entrypoint (:8080) for health checks.
+      # Without api.insecure, that entrypoint serves only /ping.
+      - "--ping=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
@@ -45,7 +51,7 @@ services:
         - --no-verbose
         - --tries=1
         - --spider
-        - http://127.0.0.1:8080
+        - http://127.0.0.1:8080/ping
       timeout: 10s
     image: traefik:v3.7
     networks:
@@ -77,6 +83,11 @@ services:
       - traefik.http.routers.traefik.tls=true
       - traefik.http.routers.traefik.tls.certresolver=cloudflare
       - traefik.http.routers.traefik.service=api@internal
+      - traefik.http.routers.traefik.middlewares=traefik-auth
+      # {SHA} rather than bcrypt/apr1: decrypt_secrets writes .env unquoted,
+      # so a `$` in the hash would be eaten by compose interpolation. Unsalted
+      # SHA-1 is only acceptable because the password is 32 random chars.
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_DASHBOARD_HTPASSWD:?TRAEFIK_DASHBOARD_HTPASSWD not set}"
       # TrueNAS's own web UI
       - traefik.http.routers.truenas.rule=Host(`nas.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.truenas.tls=true
@@ -121,12 +132,15 @@ services:
       - "homepage.href=https://traefik.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
       - homepage.description=Web server and reverse proxy
       - homepage.widget.type=traefik
-      - "homepage.widget.url=http://traefik:8080"
+      # Through the authenticated router; :8080 no longer serves the API.
+      - "homepage.widget.url=https://traefik.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.widget.username=${TRAEFIK_DASHBOARD_USER:?TRAEFIK_DASHBOARD_USER not set}
+      - homepage.widget.password=${TRAEFIK_DASHBOARD_PASSWORD:?TRAEFIK_DASHBOARD_PASSWORD not set}
       # Gatus
       - gatus.enable=true
       - gatus.name=Traefik Web UI
       - gatus.group=Infra
-      - "gatus.url=http://traefik:8080"
+      - "gatus.url=http://traefik:8080/ping"
       - gatus.interval=1m
       - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
 
