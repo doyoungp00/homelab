@@ -8,7 +8,7 @@ ddclient is a dynamic DNS client. It checks the network's public IP and updates 
 
 Most residential internet connections don't have a static IP. Public services under `DOMAIN_PUBLIC` and the WireGuard endpoint (`WG_HOST`) need DNS records that follow the public IP, or they become unreachable whenever the ISP assigns a new one.
 
-# Known caveats
+# Notes
 
 1. The configuration (`ddclient.conf`) lives only in `${MNT_APPDATA}/ddclient/config`, not in this repo, since it contains DNS provider credentials. It must be recreated by hand on a new host.
 

@@ -12,7 +12,7 @@ This stack also runs a custom **gatus-generator** container. Gatus only reads a 
 
 2. With the generator, adding monitoring for a service is just a few labels in its `compose.yaml`, the same way Traefik and Homepage are configured.
 
-# Known caveats
+# Notes
 
 1. `config.yaml` is regenerated constantly. Manual edits are overwritten within 30 seconds.
 

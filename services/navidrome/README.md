@@ -8,7 +8,7 @@ Navidrome is a music server for streaming a local music library.
 
 The local music library can be streamed from the browser or from any Subsonic-compatible app, at home and remotely through `DOMAIN_PUBLIC`.
 
-# Known caveats
+# Notes
 
 1. The music folder is mounted read-only, so Navidrome can't edit tags or delete files. Manage the library from outside Navidrome.
 

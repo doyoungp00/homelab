@@ -14,7 +14,7 @@ Traefik is a reverse proxy that routes requests to each service by hostname and 
 
 4. It also routes `nas.example.com` to TrueNAS's own web UI on `${HOST_IP}:81`.
 
-# Known caveats
+# Notes
 
 1. Traefik uses ports 80 and 443, so ensure the host isn't already using them. For example, configure TrueNAS to serve its web UI at ports 81 and 444.
 

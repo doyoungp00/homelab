@@ -11,7 +11,7 @@ Deploy Agent is a custom CI/CD service that keeps the running stack in sync with
 
 Changes are made by pushing to `main`, not by logging into the NAS. The agent removes the need to SSH in, pull, decrypt secrets, and run compose for each changed service by hand.
 
-# Known caveats
+# Notes
 
 1. The agent can't redeploy itself. Changes to this directory have to be applied by hand with `docker compose up -d --build --force-recreate`. `--force-recreate` is required, or the rebuilt image goes unused. See [first-setup.md](first-setup.md).
 

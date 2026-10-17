@@ -15,7 +15,7 @@ It watches the download folder and rearranges each title into the local source l
 
 Downloaded chapters are tied to the online source they came from. Moving them into the local source keeps them in the library permanently, even if the original source changes or goes away.
 
-# Known caveats
+# Notes
 
 1. A folder is only moved once its contents have stopped changing for 30 seconds (`--settle-seconds`), so it doesn't grab a download that's still in progress.
 

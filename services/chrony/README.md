@@ -8,7 +8,7 @@ Chrony is a local NTP server that mirrors Cloudflare Time Services.
 
 Some devices that are deliberately disconnected from the internet (IP cameras, IoT devices, etc.) may experience clock drift over prolonged periods of time. A local NTP server allows devices to sync time while still disconnected.
 
-# Known caveats
+# Notes
 
 1. If a device has a fixed NTP server (`pool.ntp.org`, `time.windows.com`) with no option to change this setting, use AdGuard Home's DNS rewrite feature. Or, modify AdGuard Home's config to add DHCP option 42 (network must be using AdGuard Home as the DHCP server).
 

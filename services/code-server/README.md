@@ -10,7 +10,7 @@ code-server runs VS Code on the server and serves it through the browser.
 
 2. The custom image includes the tools needed to work on this homelab and other projects: Git, GitHub CLI, Python, .NET SDK (LTS), Rust, and sops for editing the `secret.sops.env` files.
 
-# Known caveats
+# Notes
 
 1. The toolchains are installed in the image, outside of `/home/coder`, so they don't bloat the persisted home directory. Updating them means rebuilding the image (`docker compose build --pull`). Anything installed by hand outside of `/home/coder` is lost on rebuild.
 

@@ -10,7 +10,7 @@ Homepage is a dashboard with links and live widgets for every service in the sta
 
 2. Services are discovered from `homepage.*` labels on each container, so adding a service to the dashboard is done in that service's `compose.yaml`.
 
-# Known caveats
+# Notes
 
 1. `${MNT_APPDATA}/homepage/config` is generated. `hooks.py` builds it on every deploy from `config/` in this repo, plus a machine-local overlay in `${MNT_APPDATA}/homepage/local/`. Editing files in `config/` in appdata won't survive a deploy. Edit the repo copy or the overlay instead.
 

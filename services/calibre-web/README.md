@@ -10,7 +10,7 @@ Calibre-Web is a web app for browsing, reading, and managing an ebook library bu
 
 2. With the `universal-calibre` Docker mod, Calibre's `ebook-convert` binary is included in the container. Books can be converted between formats (e.g. EPUB to KEPUB or MOBI) right from the web UI, and sent straight to e-readers.
 
-# Known caveats
+# Notes
 
 1. The `universal-calibre` mod is x64 only. On other architectures, remove `DOCKER_MODS` and conversion won't be available.
 

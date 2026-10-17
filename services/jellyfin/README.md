@@ -10,7 +10,7 @@ Jellyfin is a media server for streaming movies and TV shows.
 
 2. Hardware transcoding through the host's GPU (`/dev/dri`) lets lower-powered clients play formats they don't support natively.
 
-# Known caveats
+# Notes
 
 1. The `render` (`107`) and `video` (`44`) group IDs in `group_add` are specific to this host. Check them with `getent group render video` on a new host, or hardware transcoding will fail.
 

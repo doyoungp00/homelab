@@ -8,7 +8,7 @@ Home Assistant is a home automation platform that connects and controls smart ho
 
 Devices from different brands can be controlled from one app and automated together, and most integrations run locally without depending on each vendor's cloud.
 
-# Known caveats
+# Notes
 
 1. Home Assistant needs to trust Traefik's `X-Forwarded-For` header. Otherwise every request looks like it came from Traefik, and one failed login can IP-ban the whole household. `hooks.py` writes the trusted proxy settings into `config/.storage/http` on every deploy.
 

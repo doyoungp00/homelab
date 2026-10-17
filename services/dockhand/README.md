@@ -8,7 +8,7 @@ Dockhand is a web UI for managing Docker containers, images, and compose stacks.
 
 It gives an overview of every container on the host in one place, and shows when newer images are available for services that use a plain `image:` tag.
 
-# Known caveats
+# Notes
 
 1. Dockhand has read-write access to the Docker socket, which is effectively root on the host. Make sure authentication is enabled.
 

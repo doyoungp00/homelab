@@ -10,7 +10,7 @@ CrowdSec is an intrusion detection engine. It reads Traefik's access log, detect
 
 2. The bouncer middleware is applied on Traefik's `websecure` entrypoint rather than per router, so every service behind Traefik is covered automatically, including ones added later.
 
-# Known caveats
+# Notes
 
 1. `/etc/crowdsec` is not persisted. Hub collections are installed at every boot from the `COLLECTIONS` environment variable, so anything installed by hand with `cscli` is lost on restart. Add it to `COLLECTIONS` instead.
 

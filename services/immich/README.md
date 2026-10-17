@@ -10,7 +10,7 @@ Immich is a self-hosted photo and video library, similar to Google Photos.
 
 2. Machine learning features like face recognition and smart search run locally. The ML container uses OpenVINO with the host's Intel GPU (`/dev/dri`).
 
-# Known caveats
+# Notes
 
 1. Immich releases often include breaking changes. Read the release notes before updating, especially across major versions.
 

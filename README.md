@@ -36,6 +36,7 @@ Docker Compose services for a self-hosted homelab running on TrueNAS SCALE. Ever
 | [qBittorrent](services/arr-stack/README.md)                                            | BitTorrent client                                                        |
 | [Radarr](services/arr-stack/README.md)                                                 | Monitors, downloads, and organizes movies                                |
 | [Scrutiny](services/scrutiny/README.md)                                                | Hard drive S.M.A.R.T. monitoring                                         |
+| [slskd](services/slskd/README.md)                                                      | Soulseek client for the music the Arr Stack can't index                  |
 | [Sonarr](services/arr-stack/README.md)                                                 | Monitors, downloads, and organizes TV shows                              |
 | [Suwayomi Downloads Processor](services/suwayomi-server-downloads-processor/README.md) | Moves Suwayomi downloads into its local library                          |
 | [Suwayomi-Server](services/arr-stack/README.md)                                        | Manga reader and downloader                                              |
@@ -61,7 +62,7 @@ Docker Compose services for a self-hosted homelab running on TrueNAS SCALE. Ever
 │       ├── secret.sops.env   Encrypted service-specific secrets (optional)
 │       ├── hooks.py          Places config under appdata before deploy (optional)
 │       ├── Dockerfile        For custom-built images (optional)
-│       └── README.md         What it's for, why it's needed, known caveats
+│       └── README.md         What it's for, why it's needed, notes
 ├── tests/                    pytest suite for scripts/
 └── .sops.yaml                Encrypts every secret.sops.env with the age key
 ```
@@ -93,4 +94,4 @@ Only Deploy Agent is set up by hand. Once it's running, it deploys every other s
 3. Decrypt Deploy Agent's `WEBHOOK_SECRET`.
 4. Build and launch Deploy Agent.
 
-On its first start, Deploy Agent creates the `proxy` network and force-deploys every service, which can take several minutes. Some services need extra setup afterwards. Check the **Known caveats** in each service's README.
+On its first start, Deploy Agent creates the `proxy` network and force-deploys every service, which can take several minutes. Some services need extra setup afterwards. Check the **Notes** in each service's README.

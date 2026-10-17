@@ -10,7 +10,7 @@ Dawarich is a self-hosted location history tracker, similar to Google Maps Timel
 
 2. Existing history (e.g. a Google Takeout export) can be imported, and phones can keep reporting new points through apps like OwnTracks or Overland.
 
-# Known caveats
+# Notes
 
 1. The app container is limited to 0.5 CPU and 4G of memory by default, with one web worker (`WEB_CONCURRENCY`) and three background job threads (`BACKGROUND_PROCESSING_CONCURRENCY`). This keeps idle usage low, but large imports will be slow. Raise these temporarily if needed.
 

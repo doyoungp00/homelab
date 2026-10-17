@@ -10,7 +10,7 @@ Karakeep is a bookmarking app for links, notes, and images, with full-text searc
 
 2. Bookmarks are searchable through Meilisearch, and can be tagged automatically by AI if `OPENAI_API_KEY` is set.
 
-# Known caveats
+# Notes
 
 1. Full page archives, PDFs, and video downloads are all enabled, which can use a lot of disk space over time.
 

@@ -10,6 +10,6 @@ AdGuard Home is a local DNS server with ad blocking at the network level.
 
 2. With the DNS rewrite feature, local domains can resolve to local network addresses. This is how the `DOMAIN_LOCAL` environment works. Clients that use AdGuard Home as their DNS server can connect to `<service>.example.com`. A rewrite rule that covers `*.example.com` will forward it to Traefik for reverse proxy.
 
-# Known caveats
+# Notes
 
 By being on the `proxy` network, traffic from other containers will all show as one client (e.g. `172.16.25.1`, which is `proxy`'s gateway IP), obfuscating which container is making which request. This is an architectural limit on Docker's side.

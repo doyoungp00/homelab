@@ -8,7 +8,7 @@ Nextcloud is a self-hosted cloud storage and collaboration platform. Nextcloud A
 
 Files, contacts, and calendars sync across devices and can be shared with others, while staying on the NAS instead of a third-party cloud.
 
-# Known caveats
+# Notes
 
 1. Only the mastercontainer is defined in `compose.yaml`. It creates every other container (Apache, database, Redis, etc.) itself, so those aren't managed by this repo or Deploy Agent. Updates and backups are done through the AIO interface.
 

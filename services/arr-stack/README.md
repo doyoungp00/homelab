@@ -43,7 +43,7 @@ Additional containers run in this stack alongside the arr stack.
 
 The conventional method of searching for media, downloading it, renaming each file to fit your library, then moving and organizing each file gets tiring fast. The arr stack automates every step, and even integrates with Jellyfin to trigger a scan of newly added or modified media.
 
-# Known caveats
+# Notes
 
 1. Prowlarr, qBittorrent, and Suwayomi-Server use `network_mode: service:gluetun`, so they have no network identity of their own. Their Traefik and Gatus labels live on the `gluetun` container, other containers reach them at `gluetun:<port>`, and their Homepage cards are defined in Homepage's `services.yaml` instead.
 

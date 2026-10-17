@@ -10,7 +10,7 @@ wg-easy is a WireGuard VPN server with a web UI for managing clients.
 
 2. Clients use AdGuard Home (`HOST_IP`) as their DNS server, so local domains resolve and ads are blocked even away from home.
 
-# Known caveats
+# Notes
 
 1. UDP port `51820` must be forwarded on the router, and `WG_HOST` must point at the public IP (kept up to date by ddclient).
 

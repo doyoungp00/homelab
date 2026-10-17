@@ -10,7 +10,7 @@ Frigate is a network video recorder (NVR) with real-time object detection for IP
 
 2. Object detection (people, cars, etc.) means recordings and alerts are based on actual events rather than any pixel change.
 
-# Known caveats
+# Notes
 
 1. `config/config.yaml` is only a starter config. `hooks.py` seeds it into appdata once, on a host that has never run Frigate. After that, Frigate's UI owns the live file, so changes to the repo copy are never applied. Edit the live config instead. This is a deliberate choice as camera setups are going to be different for every location.
 
