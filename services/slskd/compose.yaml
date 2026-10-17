@@ -1,0 +1,91 @@
+services:
+  slskd:
+    container_name: slskd
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      # - PUID=1000
+      # - PGID=1000
+      # slskd's primary API key, read by Homepage's widget. Named keys only
+      # exist in slskd.yml, which lives in appdata and so isn't in git; the
+      # primary key is the one slskd accepts from the environment. The value
+      # packs role and CIDR into one string, in that order, key last. Scoped
+      # to the proxy subnet so the key is useless off that network, and
+      # ReadOnly so a leak can't drive the client.
+      #
+      # Optional: slskd ignores the key when it's blank, so a first install
+      # deploys without one and the Homepage card just loads without its
+      # widget. `:+` is what makes blank mean blank — under a plain `:-` the
+      # role and CIDR prefix would survive on its own, and slskd rejects a
+      # prefix with a zero-length key rather than ignoring it.
+      - "SLSKD_API_KEY=${SLSKD_HOMEPAGE_KEY:+role=ReadOnly;cidr=172.16.25.0/24;}${SLSKD_HOMEPAGE_KEY:-}"
+      # Web UI login. Required rather than defaulted: slskd falls back to
+      # slskd/slskd when these are unset, and refuses to start on an empty
+      # string, so neither kind of blank is safe.
+      #
+      # These hold only while slskd.yml has no web.authentication section.
+      # It's generated fully commented out, so they apply on a fresh install,
+      # but YAML loads after the environment — changing the password from the
+      # web UI writes a real key there and silently wins from then on. Change
+      # it here and redeploy instead.
+      - SLSKD_USERNAME=${SLSKD_WEB_USERNAME:?SLSKD_WEB_USERNAME not set}
+      - SLSKD_PASSWORD=${SLSKD_WEB_PASSWORD:?SLSKD_WEB_PASSWORD not set}
+      # Soulseek network login. Optional: slskd starts and serves its UI
+      # without them, it just never connects to the network.
+      - SLSKD_SLSK_USERNAME=${SLSKD_SLSK_USERNAME:-}
+      - SLSKD_SLSK_PASSWORD=${SLSKD_SLSK_PASSWORD:-}
+      - SLSKD_REMOTE_CONFIGURATION=true
+      # Both default to directories under /app, which would put shares and
+      # finished downloads in appdata. Pointed at the media dataset instead.
+      # slskd never creates these, so the bind mounts below have to resolve
+      # to directories that already exist.
+      - SLSKD_SHARED_DIR=/shared
+      - SLSKD_DOWNLOADS_DIR=/downloads
+      - SLSKD_INCOMPLETE_DIR=/incomplete
+    image: slskd/slskd
+    networks:
+      - proxy
+    # ports:
+    #   - "5030:5030" # HTTP
+    #   - "5031:5031" # HTTPS (self signed cert)
+    #   - "50300:50300" # Incoming connections listener
+    restart: always
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/slskd:/app
+      # Read-only: slskd serves files out of its shares and never writes to
+      # them, so there's nothing to gain from letting the network's traffic
+      # reach the library with write access.
+      - ${PATH_SLSKD_SHARED:?PATH_SLSKD_SHARED not set}:/shared:ro
+      - ${PATH_SLSKD_DOWNLOADS:?PATH_SLSKD_DOWNLOADS not set}:/downloads
+      - ${PATH_SLSKD_INCOMPLETE_DOWNLOADS:?PATH_SLSKD_INCOMPLETE_DOWNLOADS not set}:/incomplete
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.slskd.rule=Host(`slskd.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.slskd.tls=true
+      - traefik.http.routers.slskd.tls.certresolver=cloudflare
+      - traefik.http.services.slskd.loadbalancer.server.port=5030
+      # Homepage
+      - homepage.group=Downloads
+      - homepage.name=Soulseek
+      - homepage.icon=soulseek.png
+      - "homepage.href=https://slskd.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=P2P file sharing
+      - homepage.widget.type=slskd
+      - "homepage.widget.url=http://slskd:5030"
+      - homepage.widget.key=${SLSKD_HOMEPAGE_KEY:-}
+      - 'homepage.widget.fields=["slskStatus","downloads","uploads"]'
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=slskd
+      - gatus.group=Downloads
+      - "gatus.url=http://slskd:5030"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] < 400"]'
+
+networks:
+  proxy:
+    external: true
