@@ -134,8 +134,8 @@ services:
       - homepage.widget.type=traefik
       # Through the authenticated router; :8080 no longer serves the API.
       - "homepage.widget.url=https://traefik.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
-      - homepage.widget.username=${TRAEFIK_DASHBOARD_USER:?TRAEFIK_DASHBOARD_USER not set}
-      - homepage.widget.password=${TRAEFIK_DASHBOARD_PASSWORD:?TRAEFIK_DASHBOARD_PASSWORD not set}
+      - homepage.widget.username=${TRAEFIK_DASHBOARD_USER:-}
+      - homepage.widget.password=${TRAEFIK_DASHBOARD_PASSWORD:-}
       # Gatus
       - gatus.enable=true
       - gatus.name=Traefik Web UI
