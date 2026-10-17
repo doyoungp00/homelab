@@ -58,7 +58,7 @@ services:
       - traefik.http.routers.nextcloud-aio.tls.certresolver=cloudflare
       - "traefik.http.services.nextcloud-aio.loadbalancer.server.url=http://nextcloud-aio-apache:11000"
       # Homepage
-      - homepage.group=Media
+      - homepage.group=Services
       - homepage.name=Nextcloud AIO
       - homepage.icon=nextcloud.png
       - "homepage.href=https://cloud.${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set}"
@@ -71,7 +71,7 @@ services:
       # Gatus
       - gatus.enable=true
       - gatus.name=Nextcloud AIO
-      - gatus.group=Media
+      - gatus.group=Services
       - "gatus.url=http://nextcloud-aio-apache:11000/status.php"
       - gatus.interval=10m
       - 'gatus.conditions=["[STATUS] < 400"]'

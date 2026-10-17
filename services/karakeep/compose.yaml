@@ -62,7 +62,7 @@ services:
       - traefik.http.routers.karakeep.tls.certresolver=cloudflare
       - traefik.http.services.karakeep.loadbalancer.server.port=3000
       # Homepage
-      - homepage.group=Media
+      - homepage.group=Services
       - homepage.name=Karakeep
       - homepage.icon=karakeep.png
       - "homepage.href=https://karakeep.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
@@ -74,7 +74,7 @@ services:
       # Gatus
       - gatus.enable=true
       - gatus.name=Karakeep
-      - gatus.group=Media
+      - gatus.group=Services
       - "gatus.url=http://karakeep:3000"
       - gatus.interval=10m
       - 'gatus.conditions=["[STATUS] < 400"]'
