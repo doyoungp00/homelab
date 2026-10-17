@@ -31,12 +31,13 @@ Docker Compose services for a self-hosted homelab running on TrueNAS SCALE. Ever
 | [Karakeep](services/karakeep/README.md)                                                | Bookmarking with page archiving and search                               |
 | [MySpeed](services/myspeed/README.md)                                                  | Scheduled internet speed tests                                           |
 | [Navidrome](services/navidrome/README.md)                                              | Music streaming                                                          |
+| [ntfy](services/ntfy/README.md)                                                        | Simple HTTP pub-sub notifications                                        |
 | [Nextcloud AIO](services/nextcloud-aio/README.md)                                      | Cloud storage, contacts, and calendars                                   |
 | [Prowlarr](services/arr-stack/README.md)                                               | Indexer manager for Radarr and Sonarr                                    |
 | [qBittorrent](services/arr-stack/README.md)                                            | BitTorrent client                                                        |
 | [Radarr](services/arr-stack/README.md)                                                 | Monitors, downloads, and organizes movies                                |
 | [Scrutiny](services/scrutiny/README.md)                                                | Hard drive S.M.A.R.T. monitoring                                         |
-| [slskd](services/slskd/README.md)                                                      | Soulseek client for the music the Arr Stack can't index                  |
+| [slskd](services/slskd/README.md)                                                      | Soulseek client                                                          |
 | [Sonarr](services/arr-stack/README.md)                                                 | Monitors, downloads, and organizes TV shows                              |
 | [Suwayomi Downloads Processor](services/suwayomi-server-downloads-processor/README.md) | Moves Suwayomi downloads into its local library                          |
 | [Suwayomi-Server](services/arr-stack/README.md)                                        | Manga reader and downloader                                              |
