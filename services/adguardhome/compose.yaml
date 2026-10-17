@@ -65,6 +65,7 @@ services:
       - gatus[1].dns.query-name=example.com
       - gatus[1].dns.query-type=A
       - 'gatus[1].conditions=["[DNS_RCODE] == NOERROR"]'
+      - gatus[1].alert=true
 
 networks:
   proxy:

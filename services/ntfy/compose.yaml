@@ -34,8 +34,8 @@ services:
     user: "568:568"
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - ${MNT_APPDATA:?MNT_APPDATA not set}/ntfy/cache:/var/cache/ntfy
-      # ntfy supports fully env-only configuration
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/ntfy:/var/lib/ntfy
+      # ntfy supports fully env-only configuration, no need to mount config directory
       # - ${MNT_APPDATA:?MNT_APPDATA not set}/ntfy/etc:/etc/ntfy
     labels:
       # Traefik

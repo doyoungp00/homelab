@@ -47,8 +47,9 @@ services:
       - gatus.name=Home Assistant
       - gatus.group=Infra
       - "gatus.url=http://homeassistant:8123"
-      - gatus.interval=10m
+      - gatus.interval=5m
       - 'gatus.conditions=["[STATUS] < 400"]'
+      - gatus.alert=true
 
 networks:
   proxy:

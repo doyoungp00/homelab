@@ -71,6 +71,7 @@ services:
       - "gatus.url=http://wg-easy:51821"
       - gatus.interval=5m
       - 'gatus.conditions=["[STATUS] == 200"]'
+      - gatus.alert=true
 
 networks:
   proxy:

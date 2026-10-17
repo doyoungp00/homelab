@@ -55,4 +55,4 @@ head -c 256 /dev/urandom | LC_ALL=C tr -dc 'A-Za-z0-9' | head -c 29
 
 11. `NTFY_BEHIND_PROXY=true` is required because every request arrives from Traefik. Without it, ntfy rate-limits by the proxy's IP and treats all visitors as one.
 
-12. `NTFY_UPSTREAM_BASE_URL=https://ntfy.sh` exists only so iOS can get background notifications: the iOS app relies on ntfy.sh's APNs relay, which has to be able to reach this server. It forwards a poll request, not message contents, but it does mean topic names are visible to ntfy.sh.
+12. `NTFY_UPSTREAM_BASE_URL=https://ntfy.sh` exists only so iOS can get background notifications: the iOS app relies on ntfy.sh's APNs relay, which has to be able to reach this server. What's forwarded is a poll request carrying the message ID and the SHA256 of the topic URL — not the topic name and not the message, which the phone then fetches from here directly. If it can't reach this server, the notification still appears, but only as `New message`.

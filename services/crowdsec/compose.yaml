@@ -58,6 +58,7 @@ services:
       - "gatus.url=http://crowdsec:8080/health"
       - gatus.interval=5m
       - 'gatus.conditions=["[STATUS] == 200"]'
+      - gatus.alert=true
 
 networks:
   proxy:

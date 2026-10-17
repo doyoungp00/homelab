@@ -143,6 +143,7 @@ services:
       - "gatus.url=http://traefik:8080/ping"
       - gatus.interval=1m
       - 'gatus.conditions=["[STATUS] < 400", "[RESPONSE_TIME] < 1000"]'
+      - gatus.alert=true
 
 networks:
   proxy:
