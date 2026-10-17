@@ -21,3 +21,7 @@ This stack also runs a custom **gatus-generator** container. Gatus only reads a 
 3. Checks go directly to containers over the `proxy` network, not through Traefik. A broken route or certificate won't be caught.
 
 4. Docker labels can't repeat a key. A container that serves several services (e.g. via `network_mode: service:gluetun`) needs indexed labels like `gatus[1].url`.
+
+5. `gatus.alert=true` on a container sends an ntfy notification when that endpoint fails three checks in a row, and again when it recovers. It's opt-in per endpoint: monitoring everything is useful, but being paged for everything isn't. The `alerting` block only appears in `config.yaml` once at least one container carries the label.
+
+6. Alerting needs `NTFY_TOKEN` in gatus's `secret.sops.env` — a token for the `gatus` account on ntfy, which has write-only access to the `alerts` topic. The generator writes the literal string `${NTFY_TOKEN}` into `config.yaml` and Gatus expands it at load, so the token never lands in the file. Without the variable set, Gatus starts but every alert gets a 401 from ntfy.

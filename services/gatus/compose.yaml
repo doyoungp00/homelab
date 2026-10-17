@@ -42,6 +42,8 @@ services:
     container_name: gatus-generator
     environment:
       - GENERATE_INTERVAL_SECONDS=30
+      - NTFY_URL=http://ntfy
+      - NTFY_TOPIC=alerts
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro

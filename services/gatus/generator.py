@@ -14,6 +14,8 @@ Label contract, per container:
   gatus.interval=<duration>       optional (e.g. "30s"); Gatus's own default applies if absent
   gatus.conditions=<json>         optional JSON array of condition strings,
                                    defaults to '["[STATUS] == 200"]'
+  gatus.alert=true                optional, sends an ntfy notification when this
+                                   endpoint goes down and again when it recovers
   gatus.headers.<Header>=val      optional, any number of these become the endpoint's `headers:` map
   gatus.dns.<key>=val             optional, any number of these become the endpoint's `dns:` map
                                    (e.g. gatus.dns.query-name=, gatus.dns.query-type=) — for the
@@ -44,6 +46,12 @@ CONFIG_PATH = Path(os.environ.get("CONFIG_PATH", "/config/config.yaml"))
 INTERVAL_SECONDS = int(os.environ.get("GENERATE_INTERVAL_SECONDS", "30"))
 DEFAULT_CONDITIONS = ["[STATUS] == 200"]
 GATUS_FIELD_RE = re.compile(r"^gatus(?:\[(\d+)\])?\.(.+)$")
+# Reached over `proxy` rather than through Traefik, for the same reason the
+# checks themselves are: going out to the public hostname and back in would
+# hairpin an internal alert through the WAF. NTFY_TOPIC has to match the topic
+# ntfy's own NTFY_AUTH_ACCESS grants the `gatus` account write access to.
+NTFY_URL = os.environ.get("NTFY_URL", "http://ntfy")
+NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "alerts")
 
 
 def log(message: str) -> None:
@@ -115,6 +123,9 @@ def endpoint_from_fields(
     else:
         endpoint["conditions"] = list(DEFAULT_CONDITIONS)
 
+    if fields.get("alert", "").lower() == "true":
+        endpoint["alerts"] = [{"type": "ntfy"}]
+
     headers = {
         field[len("headers.") :]: value
         for field, value in fields.items()
@@ -143,6 +154,28 @@ def endpoints_from_labels(labels: dict[str, str]) -> list[dict[str, Any]]:
     return endpoints
 
 
+def ntfy_alerting() -> dict[str, Any]:
+    """The `alerting.ntfy` block that `alerts: [{type: ntfy}]` resolves against.
+
+    The token is emitted as a literal `${NTFY_TOKEN}` rather than its value:
+    Gatus expands environment variables when it loads config.yaml, so the
+    credential stays in gatus's own env and never reaches the file, which this
+    generator rewrites in the clear on a volume Homepage and Dozzle can read.
+    """
+    return {
+        "url": NTFY_URL,
+        "topic": NTFY_TOPIC,
+        "token": "${NTFY_TOKEN}",
+        # Three consecutive failures before alerting, so a single missed check
+        # during a redeploy doesn't page anyone.
+        "default-alert": {
+            "failure-threshold": 3,
+            "success-threshold": 2,
+            "send-on-resolved": True,
+        },
+    }
+
+
 def build_config() -> dict[str, Any]:
     endpoints = []
     for labels in container_labels(labeled_container_ids()):
@@ -152,10 +185,14 @@ def build_config() -> dict[str, Any]:
             continue
         endpoints.extend(container_endpoints)
     endpoints.sort(key=lambda e: e["name"])
-    return {
-        "storage": {"type": "sqlite", "path": "/data/data.db"},
-        "endpoints": endpoints,
-    }
+    config: dict[str, Any] = {"storage": {"type": "sqlite", "path": "/data/data.db"}}
+    # Declared only when something references it. An unused provider block
+    # would have Gatus resolving ${NTFY_TOKEN} — and complaining when it's
+    # unset — on a stack where nothing has opted into alerting yet.
+    if any("alerts" in endpoint for endpoint in endpoints):
+        config["alerting"] = {"ntfy": ntfy_alerting()}
+    config["endpoints"] = endpoints
+    return config
 
 
 def write_if_changed(config: dict[str, Any]) -> None:
