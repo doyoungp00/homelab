@@ -47,12 +47,20 @@ head -c 256 /dev/urandom | LC_ALL=C tr -dc 'A-Za-z0-9' | head -c 29
 
 7. These lists own the database. Users and tokens declared in the config are marked provisioned, and removing an entry deletes it from `user.db` at the next start. A password changed from the web UI doesn't survive a restart either. Rotate a credential by editing `secret.sops.env` and redeploying, not from the UI.
 
-8. The auth variables must live in `secret.sops.env`, not in the `environment:` block of `compose.yaml`. A bcrypt hash contains `$`, which compose interpolation eats — the same problem as the Traefik dashboard's password hash. Values from an `env_file` are passed through literally. After a deploy, confirm with `docker compose --project-directory services/ntfy exec ntfy env | grep NTFY_AUTH` that the hashes still read `$2a$10$` and are 60 characters long.
+8. `NTFY_AUTH_USERS` must be single-quoted in `secret.sops.env`:
 
-9. bcrypt is one-way, so the admin password can't be recovered from the config and belongs in a password manager. Tokens are the opposite: they're stored verbatim, so decrypting `secret.sops.env` always shows them. If the admin password is lost, generate a new hash, replace that one field, and redeploy.
+```
+NTFY_AUTH_USERS='admin:$2a$10$...:admin,gatus:$2a$10$...:user'
+```
 
-10. `${MNT_APPDATA}/ntfy` must exist and be writable by `568` before the first deploy. ntfy creates `cache.db` and `user.db` itself, but Docker creates a missing bind mount source as `root`, which the container then can't write to, and it restart-loops.
+A bcrypt hash contains `$`, and `.env` is not only the file `env_file:` reads. It's also the project env file compose interpolates against, so an unquoted `$Lo7Hscff...` is read as a variable name, warned about, and replaced with a blank string. Single-quoted values are used literally; the quotes are stripped before the container sees them, and `decrypt_secrets.py` keeps them because it splits on the first `=` only. `NTFY_AUTH_ACCESS` and `NTFY_AUTH_TOKENS` contain no `$` and don't need it. This is the same hazard as the Traefik dashboard's password hash, which dodged it by using `{SHA}` instead of bcrypt.
 
-11. `NTFY_BEHIND_PROXY=true` is required because every request arrives from Traefik. Without it, ntfy rate-limits by the proxy's IP and treats all visitors as one.
+9. After a deploy, confirm with `docker compose --project-directory services/ntfy exec ntfy env | grep NTFY_AUTH` that each hash still reads `$2a$10$` followed by 53 characters. A hash that stops at `$2a$10$:` means interpolation ate it.
 
-12. `NTFY_UPSTREAM_BASE_URL=https://ntfy.sh` exists only so iOS can get background notifications: the iOS app relies on ntfy.sh's APNs relay, which has to be able to reach this server. What's forwarded is a poll request carrying the message ID and the SHA256 of the topic URL — not the topic name and not the message, which the phone then fetches from here directly. If it can't reach this server, the notification still appears, but only as `New message`.
+10. bcrypt is one-way, so the admin password can't be recovered from the config and belongs in a password manager. Tokens are the opposite: they're stored verbatim, so decrypting `secret.sops.env` always shows them. If the admin password is lost, generate a new hash, replace that one field, and redeploy.
+
+11. `${MNT_APPDATA}/ntfy` must exist and be writable by `568` before the first deploy. ntfy creates `cache.db` and `user.db` itself, but Docker creates a missing bind mount source as `root`, which the container then can't write to, and it restart-loops.
+
+12. `NTFY_BEHIND_PROXY=true` is required because every request arrives from Traefik. Without it, ntfy rate-limits by the proxy's IP and treats all visitors as one.
+
+13. `NTFY_UPSTREAM_BASE_URL=https://ntfy.sh` exists only so iOS can get background notifications: the iOS app relies on ntfy.sh's APNs relay, which has to be able to reach this server. What's forwarded is a poll request carrying the message ID and the SHA256 of the topic URL — not the topic name and not the message, which the phone then fetches from here directly. If it can't reach this server, the notification still appears, but only as `New message`.
