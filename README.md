@@ -88,8 +88,9 @@ python -m scripts.encrypt_secrets --services <name>
 
 Only Deploy Agent is set up by hand. Once it's running, it deploys every other service. Follow [first-setup.md](services/deploy-agent/first-setup.md) to:
 
-1. Clone this repo into Deploy Agent's appdata and copy in the age key.
-2. Decrypt Deploy Agent's `WEBHOOK_SECRET`.
-3. Build and launch Deploy Agent.
+1. Move the host OS web UI off ports 80 and 443 so Traefik can bind them.
+2. Clone this repo into Deploy Agent's appdata and copy in the age key.
+3. Decrypt Deploy Agent's `WEBHOOK_SECRET`.
+4. Build and launch Deploy Agent.
 
 On its first start, Deploy Agent creates the `proxy` network and force-deploys every service, which can take several minutes. Some services need extra setup afterwards. Check the **Known caveats** in each service's README.

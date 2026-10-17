@@ -1,4 +1,34 @@
-# 1. Clone into the exact path that becomes the permanent `/repo` mount
+# 1. Move the host OS web UI off ports 80 and 443
+
+Traefik must use `80:80` and `443:443` on the host as those are the ports browsers
+and Let's Encrypt reach without being told otherwise. Any OS that serves its own web UI
+(TrueNAS, Synology DSM, Proxmox, OMV) ships listening on exactly those ports, so the very
+first `docker compose up` for Traefik fails with `address already in use`. Do this before
+anything else. Once the stack is running, a mistake here locks you out of both the host UI
+and every service behind the proxy at the same time.
+
+On TrueNAS SCALE, set web interface ports:
+
+| Setting                  | Value |
+| ------------------------ | ----- |
+| Web Interface HTTP Port  | `81`  |
+| Web Interface HTTPS Port | `444` |
+
+Applying this drops your current session. Reconnect at `http://<truenas-host>:81` and verify before
+continuing. The rest of this stack already assumes those two numbers: Traefik routes
+`nas.${DOMAIN_LOCAL}` to `${HOST_IP}:81` ([traefik/compose.yaml](../traefik/compose.yaml)) and
+Homepage's TrueNAS widget polls `${HOST_IP}:444`. If you pick different ports, change them
+there too.
+
+Confirm nothing else is holding the ports before moving on:
+
+```bash
+sudo ss -tlnp '( sport = :80 or sport = :443 )'
+```
+
+And confirm the output is empty.
+
+# 2. Clone into the exact path that becomes the permanent `/repo` mount
 
 ```bash
 cd /mnt/<pool>/appdata/deploy-agent
@@ -7,7 +37,7 @@ cp /path/to/age.key ./age.key   # Copied manually, never via git
 chmod 600 age.key
 ```
 
-# 2. Decrypt `WEBHOOK_SECRET` to plaintext, once, by hand
+# 3. Decrypt `WEBHOOK_SECRET` to plaintext, once, by hand
 
 TrueNAS SCALE's host OS has a read-only root filesystem — you can't `curl`/install `sops`
 onto the bare host. Run the decrypt inside a throwaway container built from the `deploy-agent` image
@@ -84,7 +114,7 @@ without touching anything else, add `?service=<name>`:
 curl -X POST -H "X-Deploy-Secret: <value>" "http://<truenas-host>:9000/deploy?service=nextcloud-aio"
 ```
 
-# 3. Launch
+# 4. Launch
 
 ```bash
 sudo MNT_APPDATA=/mnt/<pool>/appdata DOCKER_CONFIG=/mnt/<pool>/appdata/deploy-agent/.docker \
