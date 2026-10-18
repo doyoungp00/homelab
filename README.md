@@ -10,6 +10,7 @@ Docker Compose services for a self-hosted homelab running on TrueNAS SCALE. Ever
 | [Bazarr](services/arr-stack/README.md)                                                 | Fetches subtitles for movies and TV shows                                |
 | [Calibre-Web](services/calibre-web/README.md)                                          | Browse, read, and convert books from a Calibre library                   |
 | [Chrony](services/chrony/README.md)                                                    | Local NTP server for devices without internet access                     |
+| [Cleanuparr](services/arr-stack/README.md)                                             | Advanced download management for the Servarr ecosystem                   |
 | [code-server](services/code-server/README.md)                                          | VS Code in the browser, with the tools to work on this repo              |
 | [CrowdSec](services/crowdsec/README.md)                                                | Intrusion detection and WAF for Traefik                                  |
 | [Dawarich](services/dawarich/README.md)                                                | Location history tracker                                                 |

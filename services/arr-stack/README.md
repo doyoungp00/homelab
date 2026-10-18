@@ -6,6 +6,10 @@ The **Arr Stack** is a popular set of services that automate monitoring, downloa
   Syncs with Radarr and Sonarr to search for missing subtitles for movies and TV shows.\
   [Check out the project](https://www.bazarr.media)
 
+- **Cleanuparr**\
+  Cleans up stalled, blocked, and malicious downloads.\
+  [Check out the project](https://cleanuparr.github.io/)
+
 - **Flaresolverr**\
   Works with Prowlarr to help resolve Cloudflare's protection for certain indexers.\
   [Check out the project](https://github.com/Flaresolverr/Flaresolverr)

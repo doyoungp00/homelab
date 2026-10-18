@@ -49,6 +49,57 @@ services:
       - gatus.interval=10m
       - 'gatus.conditions=["[STATUS] == 200", "[RESPONSE_TIME] < 1000"]'
 
+  cleanuparr:
+    container_name: cleanuparr
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      - PORT=11011
+      - BASE_PATH=
+      # - PUID=1000
+      # - PGID=1000
+      - UMASK=022
+      # - TZ=Etc/UTC
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      test:
+        - CMD-SHELL
+        - curl -fSs http://127.0.0.1:11011/health || exit 1
+      timeout: 10s
+    image: ghcr.io/cleanuparr/cleanuparr:latest
+    networks:
+      - proxy
+    # ports:
+    #   - "11011:11011"
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/arr-stack/cleanuparr-config:/config
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.cleanuparr.rule=Host(`cleanuparr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.cleanuparr.tls=true
+      - traefik.http.routers.cleanuparr.tls.certresolver=cloudflare
+      - traefik.http.services.cleanuparr.loadbalancer.server.port=11011
+      # Homepage
+      - homepage.group=Downloads
+      - homepage.name=Cleanuparr
+      - homepage.icon=cleanuparr.png
+      - homepage.description=Advanced download manager for the Servarr ecosystem
+      - "homepage.href=https://cleanuparr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Cleanuparr
+      - "gatus.group=arr Stack"
+      - "gatus.url=http://cleanuparr:11011/health"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] == 200", "[RESPONSE_TIME] < 1000"]'
+
   flaresolverr:
     container_name: flaresolverr
     env_file:
