@@ -40,6 +40,7 @@ Docker Compose services for a self-hosted homelab running on TrueNAS SCALE. Ever
 | [Scrutiny](services/scrutiny/README.md)                                                | Hard drive S.M.A.R.T. monitoring                                         |
 | [slskd](services/slskd/README.md)                                                      | Soulseek client                                                          |
 | [Sonarr](services/arr-stack/README.md)                                                 | Monitors, downloads, and organizes TV shows                              |
+| [Speedtest Tracker](services/speedtest-tracker/README.md)                              | Scheduled internet speed tests with result history                       |
 | [Suwayomi Downloads Processor](services/suwayomi-server-downloads-processor/README.md) | Moves Suwayomi downloads into its local library                          |
 | [Suwayomi-Server](services/arr-stack/README.md)                                        | Manga reader and downloader                                              |
 | [Traefik](services/traefik/README.md)                                                  | Reverse proxy with automatic TLS certificates                            |

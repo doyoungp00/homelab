@@ -1,0 +1,61 @@
+---
+services:
+  speedtest-tracker:
+    container_name: speedtest-tracker
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      # - PUID=
+      # - PGID=
+      - APP_KEY=${SPEEDTEST_APP_KEY:?SPEEDTEST_APP_KEY not set}
+      - "APP_URL=https://speedtest-tracker.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - DB_CONNECTION=sqlite
+      - SPEEDTEST_SCHEDULE=0 * * * *
+    healthcheck:
+      test:
+        ["CMD-SHELL", "curl -fsS http://127.0.0.1/api/healthcheck || exit 1"]
+      interval: 60s
+      retries: 3
+      start_period: 60s
+      timeout: 10s
+    image: lscr.io/linuxserver/speedtest-tracker:latest
+    networks:
+      - proxy
+    # ports:
+    #   - "8080:80"
+    #   - "8443:443"
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/speedtest-tracker/config:/config
+      # - /path/to-custom-ssl-keys:/config/keys
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.speedtest-tracker.rule=Host(`speedtest-tracker.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.speedtest-tracker.tls=true
+      - traefik.http.routers.speedtest-tracker.tls.certresolver=cloudflare
+      - traefik.http.services.speedtest-tracker.loadbalancer.server.port=80
+      # Homepage
+      - homepage.group=Infra
+      - homepage.name=Speedtest Tracker
+      - homepage.icon=speedtest-tracker.png
+      - "homepage.href=https://speedtest-tracker.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Scheduled internet speed tests
+      - homepage.widget.type=speedtest
+      - "homepage.widget.url=http://speedtest-tracker"
+      - homepage.widget.version=2
+      - homepage.widget.key=${SPEEDTEST_HOMEPAGE_KEY:-}
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Speedtest Tracker
+      - gatus.group=Infra
+      - "gatus.url=http://speedtest-tracker/api/healthcheck"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] < 400"]'
+
+networks:
+  proxy:
+    external: true
