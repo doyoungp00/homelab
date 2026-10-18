@@ -43,6 +43,7 @@ Docker Compose services for a self-hosted homelab running on TrueNAS SCALE. Ever
 | [Suwayomi Downloads Processor](services/suwayomi-server-downloads-processor/README.md) | Moves Suwayomi downloads into its local library                          |
 | [Suwayomi-Server](services/arr-stack/README.md)                                        | Manga reader and downloader                                              |
 | [Traefik](services/traefik/README.md)                                                  | Reverse proxy with automatic TLS certificates                            |
+| [Vaultwarden](services/vaultwarden/README.md)                                          | Bitwarden-compatible password and secrets manager                        |
 | [wg-easy](services/wg-easy/README.md)                                                  | WireGuard VPN server                                                     |
 
 # Project structure

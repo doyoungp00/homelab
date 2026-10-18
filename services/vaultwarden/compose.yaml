@@ -1,0 +1,51 @@
+---
+services:
+  vaultwarden:
+    container_name: vaultwarden
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      DOMAIN: https://vaultwarden.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}
+    healthcheck:
+      interval: 30s
+      retries: 3
+      test:
+        - CMD-SHELL
+        - curl -fSs http://127.0.0.1:80 || exit 1
+      timeout: 10s
+    image: vaultwarden/server:latest
+    networks:
+      - proxy
+    # ports:
+    #   - 127.0.0.1:8000:80
+    restart: unless-stopped
+    user: "568:568"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/vaultwarden/data:/data
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.vaultwarden.rule=Host(`vaultwarden.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.vaultwarden.tls=true
+      - traefik.http.routers.vaultwarden.tls.certresolver=cloudflare
+      - traefik.http.services.vaultwarden.loadbalancer.server.port=80
+      # Homepage
+      - homepage.group=Services
+      - homepage.name=Vaultwarden
+      - homepage.icon=vaultwarden.png
+      - "homepage.href=https://vaultwarden.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Password and secrets manager
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Vaultwarden
+      - gatus.group=Services
+      - "gatus.url=http://vaultwarden"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] < 400"]'
+
+networks:
+  proxy:
+    external: true
