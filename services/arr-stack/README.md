@@ -51,14 +51,16 @@ The conventional method of searching for media, downloading it, renaming each fi
 
 1. Prowlarr, qBittorrent, and Suwayomi-Server use `network_mode: service:gluetun`, so they have no network identity of their own. Their Traefik and Gatus labels live on the `gluetun` container, other containers reach them at `gluetun:<port>`, and their Homepage cards are defined in Homepage's `services.yaml` instead.
 
-2. When `gluetun` is recreated (e.g. on an image update), the containers sharing its network namespace lose connectivity and must be restarted as well. Their `depends_on` doesn't set `restart: true`, so this doesn't happen automatically.
+2. When `gluetun` is recreated (e.g. on an image update) it gets a new container ID, and the containers sharing its network namespace are left pointing at the old one - still running, still passing their own healthchecks, with no network. `compose up` can't catch this, because it decides what to recreate by hashing the resolved compose config, and that config still reads `service:gluetun`; only the ID behind it moved. `depends_on: restart: true` wouldn't fix it either: it fires only when compose itself updates the dependency, and a _restart_ re-enters the same stale `HostConfig`. `hooks.py` handles it instead, comparing the resolved ID after each deploy and recreating whatever drifted.
 
-3. Gluetun sets qBittorrent's listening port to the forwarded VPN port through qBittorrent's API on `127.0.0.1:8080`. This requires "Bypass authentication for clients on localhost" to be enabled in qBittorrent's WebUI settings, otherwise the port is never applied.
+3. That check is ID-based and deploy-time only. A `gluetun` that restarts in place (a crash, or `docker restart gluetun`) keeps its ID, so the hook stays quiet even though the dependents have lost their namespace just the same. Restart them by hand when that happens: `docker restart prowlarr qbittorrent suwayomi-server`.
 
-4. Flaresolverr is not routed through Gluetun. Indexer requests Prowlarr sends through Flaresolverr go out from the home IP, not the VPN.
+4. Gluetun sets qBittorrent's listening port to the forwarded VPN port through qBittorrent's API on `127.0.0.1:8080`. This requires "Bypass authentication for clients on localhost" to be enabled in qBittorrent's WebUI settings, otherwise the port is never applied.
 
-5. `/downloads` and the media folders (`/data/movies`, `/data/tv`) are separate bind mounts, so Radarr and Sonarr can't hardlink. Each import is a full copy, using double the space while a torrent is still seeding. Mounting a single shared parent directory into qBittorrent, Radarr, and Sonarr would allow hardlinks.
+5. Flaresolverr is not routed through Gluetun. Indexer requests Prowlarr sends through Flaresolverr go out from the home IP, not the VPN.
 
-6. qBittorrent, Radarr, and Sonarr must all mount the torrent folder at the same path (`/downloads`). Otherwise Radarr and Sonarr can't find the files qBittorrent reports as finished.
+6. `/downloads` and the media folders (`/data/movies`, `/data/tv`) are separate bind mounts, so Radarr and Sonarr can't hardlink. Each import is a full copy, using double the space while a torrent is still seeding. Mounting a single shared parent directory into qBittorrent, Radarr, and Sonarr would allow hardlinks.
 
-7. If the VPN connection drops, containers behind Gluetun lose internet access entirely rather than falling back to the home IP. This is intended, as it prevents leaks.
+7. qBittorrent, Radarr, and Sonarr must all mount the torrent folder at the same path (`/downloads`). Otherwise Radarr and Sonarr can't find the files qBittorrent reports as finished.
+
+8. If the VPN connection drops, containers behind Gluetun lose internet access entirely rather than falling back to the home IP. This is intended, as it prevents leaks.

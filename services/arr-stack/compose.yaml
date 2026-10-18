@@ -168,6 +168,10 @@ services:
     # entirely, so no networks:/ports: of its own. Its Traefik/Homepage/Gatus
     # labels live on gluetun below instead, since that's the container that
     # actually has a usable IP for Traefik to discover.
+    # Compose resolves this to gluetun's container id at create time, so a
+    # recreated gluetun strands this container on a namespace that no longer
+    # exists. Don't reach for `depends_on: restart: true`. A restart reuses
+    # the same stale id. hooks.py recreates the strays after each deploy.
     network_mode: service:gluetun
     # ports:
     #   - "9696:9696"

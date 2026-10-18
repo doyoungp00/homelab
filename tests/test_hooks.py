@@ -433,6 +433,143 @@ class TestHomepageHook:
         assert (appdata / "homepage/config/zzz.css").read_text() == "changed\n"
 
 
+GLUETUN_ID = "a" * 64
+STALE_ID = "b" * 64
+SHARERS = ("prowlarr", "qbittorrent", "suwayomi-server")
+
+
+class TestArrStackHook:
+    """The real hook. It repairs a failure that is invisible from outside —
+    containers that are up and healthy with a dead network namespace — so
+    neither firing when it should nor firing when it shouldn't would be
+    noticed by anything else."""
+
+    def hook(self, tmp_path: Path) -> Path:
+        service_dir = tmp_path / "arr-stack"
+        service_dir.mkdir()
+        real = Path(__file__).resolve().parent.parent / "services/arr-stack/hooks.py"
+        (service_dir / "hooks.py").write_text(real.read_text())
+        return service_dir
+
+    def fire(
+        self, svc: Path, modes: dict[str, str], gluetun_id: str = GLUETUN_ID
+    ) -> tuple[bool, list[tuple[str, ...]]]:
+        """Run post_deploy against a stand-in docker.
+
+        `modes` maps a container name to its HostConfig.NetworkMode. A name
+        missing from it is a container that doesn't exist on the host.
+        """
+        commands: list[tuple[str, ...]] = []
+
+        def fake_run(*args: str) -> str:
+            commands.append(args)
+            if args[1] == "ps":
+                name = args[-1].removeprefix("name=^").removesuffix("$")
+                if name == "gluetun":
+                    return gluetun_id
+                return "c" * 64 if name in modes else ""
+            if args[1] == "inspect":
+                return modes[args[-1]]
+            return ""
+
+        changed = hooks.fire(
+            "post_deploy", svc, proxy_subnet="10.9.0.0/24", run=fake_run
+        )
+        return changed, commands
+
+    def test_recreates_only_what_is_left_on_a_replaced_gluetun(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        svc = self.hook(tmp_path)
+
+        changed, commands = self.fire(
+            svc,
+            {
+                "prowlarr": f"container:{STALE_ID}",
+                "qbittorrent": f"container:{GLUETUN_ID}",
+                "suwayomi-server": f"container:{STALE_ID}",
+            },
+        )
+
+        assert changed is True
+        assert commands[-1][:2] == ("docker", "compose")
+        assert commands[-1][-2:] == ("prowlarr", "suwayomi-server")
+
+    def test_recreate_leaves_gluetun_itself_alone(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        # Without --no-deps, `up prowlarr` brings depends_on along and
+        # force-recreating gluetun hands it a third id, invalidating the
+        # namespace this call just repaired.
+        svc = self.hook(tmp_path)
+
+        _, commands = self.fire(svc, {"prowlarr": f"container:{STALE_ID}"})
+
+        assert "--no-deps" in commands[-1]
+        assert "--force-recreate" in commands[-1]
+        assert "gluetun" not in commands[-1]
+
+    def test_is_a_no_op_when_every_container_is_current(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        svc = self.hook(tmp_path)
+
+        changed, commands = self.fire(
+            svc, {name: f"container:{GLUETUN_ID}" for name in SHARERS}
+        )
+
+        assert changed is False
+        assert all(cmd[1] != "compose" for cmd in commands)
+
+    def test_a_short_id_counts_as_current(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        svc = self.hook(tmp_path)
+
+        changed, _ = self.fire(
+            svc, {name: f"container:{GLUETUN_ID[:12]}" for name in SHARERS}
+        )
+
+        assert changed is False
+
+    def test_the_name_form_counts_as_current(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        # If compose ever resolves to `container:gluetun` rather than an id,
+        # docker re-resolves on start and nothing needs repairing. Reading
+        # that as drift would bounce three containers on every deploy.
+        svc = self.hook(tmp_path)
+
+        changed, _ = self.fire(svc, {name: "container:gluetun" for name in SHARERS})
+
+        assert changed is False
+
+    def test_a_container_that_does_not_exist_is_skipped_not_inspected(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        svc = self.hook(tmp_path)
+
+        changed, commands = self.fire(svc, {"prowlarr": f"container:{STALE_ID}"})
+
+        assert changed is True
+        assert commands[-1][-1] == "prowlarr"
+        assert not any(
+            cmd[1] == "inspect" and cmd[-1] == "qbittorrent" for cmd in commands
+        )
+
+    def test_does_nothing_at_all_when_gluetun_is_missing(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        svc = self.hook(tmp_path)
+
+        changed, commands = self.fire(
+            svc, {name: f"container:{STALE_ID}" for name in SHARERS}, gluetun_id=""
+        )
+
+        assert changed is False
+        assert len(commands) == 1
+
+
 class TestDeployIntegration:
     def run_apply(
         self,
