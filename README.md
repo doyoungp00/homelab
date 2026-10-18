@@ -30,7 +30,6 @@ Docker Compose services for a self-hosted homelab running on TrueNAS SCALE. Ever
 | [Immich](services/immich/README.md)                                                    | Photo and video library                                                  |
 | [Jellyfin](services/jellyfin/README.md)                                                | Movie and TV streaming                                                   |
 | [Karakeep](services/karakeep/README.md)                                                | Bookmarking with page archiving and search                               |
-| [MySpeed](services/myspeed/README.md)                                                  | Scheduled internet speed tests                                           |
 | [Navidrome](services/navidrome/README.md)                                              | Music streaming                                                          |
 | [ntfy](services/ntfy/README.md)                                                        | Simple HTTP pub-sub notifications                                        |
 | [Nextcloud AIO](services/nextcloud-aio/README.md)                                      | Cloud storage, contacts, and calendars                                   |
