@@ -54,7 +54,7 @@ services:
       - homepage.widget.type=ntfy
       - "homepage.widget.url=http://ntfy"
       - homepage.widget.topic=alerts
-      - homepage.widget.token=${NTFY_HOMEPAGE_TOKEN:-}
+      - homepage.widget.key=${NTFY_HOMEPAGE_TOKEN:-}
       # Gatus
       - gatus.enable=true
       - gatus.name=ntfy
