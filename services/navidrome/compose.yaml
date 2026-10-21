@@ -8,7 +8,12 @@ services:
       - path: ../shared/env/base.env
     environment:
       - ND_DEFAULTTHEME=Spotify-ish
-      - ND_DEFAULTPLAYLISTPUBLICVISIBILITY=true
+      # Navidrome's default list with the nd-lyrics plugin appended, so
+      # sidecar files and embedded tags still win and the plugin is only
+      # consulted when a track has no lyrics of its own. `nd-lyrics` is the
+      # plugin's filename without .ndp — see hooks.py, which installs it.
+      # Without this entry the plugin loads and is never asked for anything.
+      - ND_LYRICSPRIORITY=.ttml,.yaml,.yml,.elrc,.lrc,.srt,.txt,embedded,nd-lyrics
     healthcheck:
       interval: 30s
       retries: 3
