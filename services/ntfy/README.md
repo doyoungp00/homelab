@@ -16,13 +16,13 @@ ntfy is a pub/sub notification server. Anything that can send an HTTP POST publi
 
 2. Accounts, permissions, and tokens are three separate lists, all declared as environment variables:
 
-```
-NTFY_AUTH_USERS=<username>:<bcrypt-hash>:<role>,...
-NTFY_AUTH_ACCESS=<username>:<topic-pattern>:<permission>,...
-NTFY_AUTH_TOKENS=<username>:<token>[:<label>],...
-```
+   ```
+   NTFY_AUTH_USERS=<username>:<bcrypt-hash>:<role>,...
+   NTFY_AUTH_ACCESS=<username>:<topic-pattern>:<permission>,...
+   NTFY_AUTH_TOKENS=<username>:<token>[:<label>],...
+   ```
 
-Entries are comma-separated. A token must start with `tk_` and be exactly 32 characters including that prefix. Tokens are not accounts — each one belongs to a user in `NTFY_AUTH_USERS` and carries that user's permissions, so a service account needs a row in both lists.
+   Entries are comma-separated. A token must start with `tk_` and be exactly 32 characters including that prefix. Tokens are not accounts — each one belongs to a user in `NTFY_AUTH_USERS` and carries that user's permissions, so a service account needs a row in both lists.
 
 3. `<role>` is either `admin` or `user`. An admin has read-write on every topic and ignores `NTFY_AUTH_ACCESS` entirely, so writing ACL rules for one does nothing. A `user` starts with no permissions at all: `NTFY_AUTH_DEFAULT_ACCESS=deny-all` means anything without a matching ACL entry is refused, which is what makes the instance safe to put on a public hostname.
 
@@ -30,30 +30,30 @@ Entries are comma-separated. A token must start with `tk_` and be exactly 32 cha
 
 5. Service accounts get `wo` on their own topics and nothing else, so a compromised publisher can't read back alert history or post a fake all-clear into another service's topic:
 
-```
-NTFY_AUTH_ACCESS=gatus:alerts:wo,frigate:frigate-*:wo
-```
+   ```
+   NTFY_AUTH_ACCESS=gatus:alerts:wo,frigate:frigate-*:wo
+   ```
 
 6. To add an account, generate a password hash and, for a service, a token:
 
-```
-# Generate a hash
-docker run --rm -it binwiederhier/ntfy user hash
-# Generate a token
-head -c 256 /dev/urandom | LC_ALL=C tr -dc 'A-Za-z0-9' | head -c 29
-```
+   ```
+   # Generate a hash
+   docker run --rm -it binwiederhier/ntfy user hash
+   # Generate a token
+   head -c 256 /dev/urandom | LC_ALL=C tr -dc 'A-Za-z0-9' | head -c 29
+   ```
 
-**Prefix the random string with `tk_`**. `user hash` takes no username because it only turns a password into a bcrypt string; it writes nothing and never touches the server. The username is assigned by the entry you add to `NTFY_AUTH_USERS`. Append the new entries to the three lists in `secret.sops.env`, re-encrypt with `sops --encrypt --in-place`, and deploy. A service account's password is never used, so generate a random one and discard it.
+   **Prefix the random string with `tk_`**. `user hash` takes no username because it only turns a password into a bcrypt string; it writes nothing and never touches the server. The username is assigned by the entry you add to `NTFY_AUTH_USERS`. Append the new entries to the three lists in `secret.sops.env`, re-encrypt with `sops --encrypt --in-place`, and deploy. A service account's password is never used, so generate a random one and discard it.
 
 7. These lists own the database. Users and tokens declared in the config are marked provisioned, and removing an entry deletes it from `user.db` at the next start. A password changed from the web UI doesn't survive a restart either. Rotate a credential by editing `secret.sops.env` and redeploying, not from the UI.
 
 8. `NTFY_AUTH_USERS` must be single-quoted in `secret.sops.env`:
 
-```
-NTFY_AUTH_USERS='admin:$2a$10$...:admin,gatus:$2a$10$...:user'
-```
+   ```
+   NTFY_AUTH_USERS='admin:$2a$10$...:admin,gatus:$2a$10$...:user'
+   ```
 
-A bcrypt hash contains `$`, and `.env` is not only the file `env_file:` reads. It's also the project env file compose interpolates against, so an unquoted `$Lo7Hscff...` is read as a variable name, warned about, and replaced with a blank string. Single-quoted values are used literally; the quotes are stripped before the container sees them, and `decrypt_secrets.py` keeps them because it splits on the first `=` only. `NTFY_AUTH_ACCESS` and `NTFY_AUTH_TOKENS` contain no `$` and don't need it. This is the same hazard as the Traefik dashboard's password hash, which dodged it by using `{SHA}` instead of bcrypt.
+   A bcrypt hash contains `$`, and `.env` is not only the file `env_file:` reads. It's also the project env file compose interpolates against, so an unquoted `$Lo7Hscff...` is read as a variable name, warned about, and replaced with a blank string. Single-quoted values are used literally; the quotes are stripped before the container sees them, and `decrypt_secrets.py` keeps them because it splits on the first `=` only. `NTFY_AUTH_ACCESS` and `NTFY_AUTH_TOKENS` contain no `$` and don't need it. This is the same hazard as the Traefik dashboard's password hash, which dodged it by using `{SHA}` instead of bcrypt.
 
 9. After a deploy, confirm with `docker compose --project-directory services/ntfy exec ntfy env | grep NTFY_AUTH` that each hash still reads `$2a$10$` followed by 53 characters. A hash that stops at `$2a$10$:` means interpolation ate it.
 
