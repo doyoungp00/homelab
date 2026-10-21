@@ -32,7 +32,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${MNT_APPDATA:?MNT_APPDATA not set}/navidrome/data:/data
-      - ${MNT_MEDIA:?MNT_MEDIA not set}/Music:/music:ro
+      - ${MNT_MEDIA:?MNT_MEDIA not set}/Music:/music
     labels:
       # Traefik
       - traefik.enable=true
