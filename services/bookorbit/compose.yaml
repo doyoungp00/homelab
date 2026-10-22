@@ -1,0 +1,126 @@
+---
+services:
+  app:
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    cap_drop:
+      - ALL
+    container_name: bookorbit
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      APP_URL: https://bookorbit.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET not set}
+      # Keep the library folder picker inside the books mount
+      LIBRARY_BROWSE_ROOT: /books
+      NODE_ENV: production
+      POSTGRES_DB: bookorbit
+      POSTGRES_HOST: postgres
+      POSTGRES_PASSWORD: ${BOOKORBIT_DB_PASSWORD:?BOOKORBIT_DB_PASSWORD not set}
+      POSTGRES_USER: bookorbit
+      SETUP_BOOTSTRAP_TOKEN: ${SETUP_BOOTSTRAP_TOKEN:?SETUP_BOOTSTRAP_TOKEN not set}
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 60s
+      test:
+        - CMD-SHELL
+        - node -e "fetch('http://127.0.0.1:3000').then(r => process.exit(Number(r.status >= 400)), () => process.exit(1))"
+      timeout: 10s
+    image: ghcr.io/bookorbit/bookorbit:latest
+    init: true
+    networks:
+      - bookorbit
+      - proxy
+    # ports:
+    #   - "3000:3000"
+    read_only: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+    tmpfs:
+      - /tmp
+    volumes:
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/bookorbit/data:/data
+      - ${PATH_BOOKS:?PATH_BOOKS not set}:/books
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.bookorbit.rule=Host(`bookorbit.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.bookorbit.tls=true
+      - traefik.http.routers.bookorbit.tls.certresolver=cloudflare
+      - traefik.http.services.bookorbit.loadbalancer.server.port=3000
+      # Homepage
+      - homepage.group=Media
+      - homepage.name=BookOrbit
+      - homepage.icon=bookorbit.png
+      - "homepage.href=https://bookorbit.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Read and manage books
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=BookOrbit
+      - gatus.group=Media
+      - "gatus.url=http://bookorbit:3000"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] < 400"]'
+
+  # Opt-in text-to-speech: add `--profile tts` to the compose commands.
+  # BookOrbit reaches it at http://kokoro:8880/v1 on the bookorbit network.
+  kokoro:
+    container_name: bookorbit-kokoro
+    healthcheck:
+      interval: 30s
+      retries: 5
+      start_period: 60s
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8880/v1/audio/voices')"
+      timeout: 10s
+    image: ghcr.io/remsky/kokoro-fastapi-cpu:v0.8.0
+    init: true
+    networks:
+      - bookorbit
+    profiles: ["tts"]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+
+  postgres:
+    container_name: bookorbit-db
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_DB: bookorbit
+      POSTGRES_PASSWORD: ${BOOKORBIT_DB_PASSWORD:?BOOKORBIT_DB_PASSWORD not set}
+      POSTGRES_USER: bookorbit
+    healthcheck:
+      interval: 10s
+      retries: 10
+      start_period: 20s
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      timeout: 5s
+    image: pgvector/pgvector:pg18
+    networks:
+      - bookorbit
+    restart: unless-stopped
+    volumes:
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/bookorbit/postgres:/var/lib/postgresql/data
+
+networks:
+  bookorbit: null
+  proxy:
+    external: true
