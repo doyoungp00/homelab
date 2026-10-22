@@ -48,6 +48,10 @@ services:
       # One preloaded Puma worker is plenty for a household instance and
       # halves idle memory. Raise for busier instances.
       WEB_CONCURRENCY: ${WEB_CONCURRENCY:-1}
+      # Geocoding
+      PHOTON_API_HOST: app.chibigeo.com/v1/photon
+      PHOTON_API_KEY: ${PHOTON_API_KEY:-}
+      PHOTON_API_USE_HTTPS: true
     healthcheck:
       interval: 10s
       retries: 30
