@@ -20,6 +20,10 @@ The local music library can be streamed from the browser or from any Subsonic-co
 
    A mismatch fails the deploy rather than installing the file, so a release asset that changed under a tag is caught instead of being run.
 
-3. The plugin has to be enabled once by hand, under **Settings → Plugins** in the web UI. The hook only puts the file in place; Navidrome won't grant a plugin its declared permissions until someone approves them.
+3. The plugin has to be enabled once by hand, under **Settings → Plugins** in the web UI. The hook only puts the file in place; Navidrome won't grant a plugin its declared permissions until someone approves them. That approval and every plugin setting live in Navidrome's database under `${MNT_APPDATA}/navidrome/data`, not in this repo, so a fresh host gets the plugin from `hooks.py` but none of its configuration.
 
 4. `ND_LYRICSPRIORITY` in `compose.yaml` is what actually wires the plugin in. It's Navidrome's default list with `nd-lyrics` appended last, so sidecar files and embedded tags keep winning. The entry has to match the plugin's filename without `.ndp`; drop the entry and the plugin loads but is never consulted.
+
+5. The library is mounted read-write so the plugin can save what it fetches as `.lrc` files next to each song. That's off by default — turn on **Write lyrics to sidecar files** in the plugin's settings. Worth doing: `.lrc` sits ahead of `nd-lyrics` in note 4's list, so once a file exists the plugin is never asked for that track again, and the next scan folds the lyrics into the song record, which is the only way they appear in Navidrome's own web player. The web UI never asks plugins for anything.
+
+6. Navidrome itself never writes to the library — it doesn't edit tags and has no delete — so that plugin is the only thing in here that can touch the music. It also asks for outbound HTTP to any host, since the lyrics providers are configurable. Navidrome is public (note 1), so keep **Overwrite existing lyrics files** off, and consider turning on **Write lyrics to a custom path**, which confines every sidecar to one folder under the library root instead of scattering them through it.
