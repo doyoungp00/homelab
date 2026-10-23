@@ -52,6 +52,7 @@ services:
     tmpfs:
       - /tmp
     volumes:
+      - /etc/localtime:/etc/localtime:ro
       - ${MNT_APPDATA:?MNT_APPDATA not set}/bookorbit/data:/data
       - ${PATH_BOOKS:?PATH_BOOKS not set}:/books
     labels:
@@ -118,6 +119,7 @@ services:
       - bookorbit
     restart: unless-stopped
     volumes:
+      - /etc/localtime:/etc/localtime:ro
       - ${MNT_APPDATA:?MNT_APPDATA not set}/bookorbit/postgres:/var/lib/postgresql/data
 
 networks:
