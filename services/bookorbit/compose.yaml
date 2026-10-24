@@ -55,6 +55,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - ${MNT_APPDATA:?MNT_APPDATA not set}/bookorbit/data:/data
       - ${PATH_BOOKS:?PATH_BOOKS not set}:/books
+      - ${MNT_TORRENT:?MNT_TORRENT not set}:/downloads
     labels:
       # Traefik
       - traefik.enable=true
