@@ -37,6 +37,7 @@ Docker Compose services for a self-hosted homelab running on TrueNAS SCALE. Ever
 | [qBittorrent](services/arr-stack/README.md)                                            | BitTorrent client                                                        |
 | [Radarr](services/arr-stack/README.md)                                                 | Monitors, downloads, and organizes movies                                |
 | [Scrutiny](services/scrutiny/README.md)                                                | Hard drive S.M.A.R.T. monitoring                                         |
+| [Seerr](services/arr-stack/README.md)                                                  | Movie and TV show requests for Radarr and Sonarr                         |
 | [slskd](services/slskd/README.md)                                                      | Soulseek client                                                          |
 | [Sonarr](services/arr-stack/README.md)                                                 | Monitors, downloads, and organizes TV shows                              |
 | [Speedtest Tracker](services/speedtest-tracker/README.md)                              | Scheduled internet speed tests with result history                       |

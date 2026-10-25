@@ -23,6 +23,10 @@ The **Arr Stack** is a popular set of services that automate monitoring, downloa
   Automates monitoring, download, and organization of movies.\
   [Check out the project](https://radarr.video)
 
+- **Seerr**\
+  Lets users browse and request movies and TV shows, then sends approved requests to Radarr and Sonarr. Syncs with Jellyfin to show what's already available.\
+  [Check out the project](https://github.com/seerr-team/seerr)
+
 - **Sonarr**\
   Automates monitoring, download, and organization of TV shows.\
   [Check out the project](https://sonarr.tv)

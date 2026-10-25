@@ -229,6 +229,65 @@ services:
       - gatus.interval=10m
       - 'gatus.conditions=["[STATUS] == 200", "[RESPONSE_TIME] < 1000"]'
 
+  seerr:
+    container_name: seerr
+    cap_drop:
+      - ALL
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      - LOG_LEVEL=info
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      test:
+        - CMD-SHELL
+        - wget -q --spider http://localhost:5055/api/v1/settings/public || exit 1
+      timeout: 10s
+    image: ghcr.io/seerr-team/seerr:latest
+    init: true
+    networks:
+      - proxy
+    # ports:
+    #   - 5055:5055
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    user: "568:568"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/arr-stack/seerr-config:/app/config
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.seerr.rule=Host(`seerr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.seerr.tls=true
+      - traefik.http.routers.seerr.tls.certresolver=cloudflare
+      - traefik.http.services.seerr.loadbalancer.server.port=5055
+      # Homepage
+      - homepage.group=Downloads
+      - homepage.name=Seerr
+      - homepage.icon=seerr.png
+      - "homepage.href=https://seerr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Manage media library requests
+      - homepage.widget.type=seerr
+      - "homepage.widget.url=http://seerr:5055"
+      - homepage.widget.key=${SEERR_HOMEPAGE_KEY:-}
+      - 'homepage.widget.fields=["pending","completed","issues"]'
+      - homepage.widget.highlight.issues.numeric[0].level=warn
+      - homepage.widget.highlight.issues.numeric[0].when=gt
+      - homepage.widget.highlight.issues.numeric[0].value=0
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Seerr
+      - "gatus.group=arr Stack"
+      - "gatus.url=http://seerr:5055/api/v1/status"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] == 200", "[RESPONSE_TIME] < 1000"]'
+
   sonarr:
     container_name: sonarr
     env_file:
@@ -278,6 +337,9 @@ services:
       - gatus.interval=10m
       - 'gatus.conditions=["[STATUS] == 200", "[RESPONSE_TIME] < 1000"]'
 
+  #
+  # Gluetun stack
+  #
   gluetun:
     cap_add:
       - NET_ADMIN
