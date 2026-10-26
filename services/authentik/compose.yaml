@@ -1,0 +1,112 @@
+---
+services:
+  authentik-server:
+    container_name: authentik-server
+    command: server
+    depends_on:
+      authentik-db:
+        condition: service_healthy
+        restart: true
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      AUTHENTIK_POSTGRESQL__HOST: authentik-db
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS:?PG_PASS not set}
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?AUTHENTIK_SECRET_KEY not set}
+    # Pinned: authentik's release notes list per-version upgrade steps, so
+    # bump this deliberately rather than pulling whatever `latest` is.
+    image: ghcr.io/goauthentik/server:2026.8.5
+    networks:
+      - authentik
+      - proxy
+    # ports:
+    #   - 9000:9000
+    restart: unless-stopped
+    shm_size: 512mb
+    volumes:
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/authentik/data:/data
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      # Public as well as local: OIDC logins from outside redirect the
+      # browser here, so the IdP must be reachable wherever its apps are.
+      - traefik.http.routers.authentik.rule=Host(`auth.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`) || Host(`auth.${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set}`)
+      - traefik.http.routers.authentik.tls=true
+      - traefik.http.routers.authentik.tls.certresolver=cloudflare
+      - traefik.http.services.authentik.loadbalancer.server.port=9000
+      # Homepage
+      - homepage.group=Infra
+      - homepage.name=Authentik
+      - homepage.icon=authentik.png
+      - "homepage.href=https://auth.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Single sign-on for every service
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Authentik
+      - gatus.group=Infra
+      - "gatus.url=http://authentik-server:9000/-/health/live/"
+      - gatus.interval=1m
+      - 'gatus.conditions=["[STATUS] == 200"]'
+
+  # Background tasks: outpost sync, blueprints, emails. No Docker socket and
+  # so no `user: root` as in upstream's compose — outposts here are compose
+  # services in this file, not containers authentik creates itself.
+  authentik-worker:
+    container_name: authentik-worker
+    command: worker
+    depends_on:
+      authentik-db:
+        condition: service_healthy
+        restart: true
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      AUTHENTIK_POSTGRESQL__HOST: authentik-db
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS:?PG_PASS not set}
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?AUTHENTIK_SECRET_KEY not set}
+    image: ghcr.io/goauthentik/server:2026.8.5
+    networks:
+      - authentik
+    restart: unless-stopped
+    shm_size: 512mb
+    volumes:
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/authentik/data:/data
+
+  authentik-db:
+    container_name: authentik-db
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      POSTGRES_DB: authentik
+      POSTGRES_PASSWORD: ${PG_PASS:?PG_PASS not set}
+      POSTGRES_USER: authentik
+    healthcheck:
+      interval: 30s
+      retries: 5
+      start_period: 20s
+      test:
+        - CMD-SHELL
+        - pg_isready -d authentik -U authentik
+      timeout: 5s
+    image: postgres:16-alpine
+    networks:
+      - authentik
+    restart: unless-stopped
+    volumes:
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/authentik/postgres:/var/lib/postgresql/data
+
+networks:
+  authentik: null
+  proxy:
+    external: true

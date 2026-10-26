@@ -7,6 +7,7 @@ Docker Compose services for a self-hosted homelab running on TrueNAS SCALE. Ever
 | Service                                                                                | Description                                                              |
 | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | [AdGuard Home](services/adguardhome/README.md)                                         | Local DNS server with network-wide ad blocking and local domain rewrites |
+| [Authentik](services/authentik/README.md)                                              | Single sign-on and user directory for every service                      |
 | [Bazarr](services/arr-stack/README.md)                                                 | Fetches subtitles for movies and TV shows                                |
 | [BookOrbit](services/bookorbit/README.md)                                              | Ebook and audiobook library with reading progress                        |
 | [Chrony](services/chrony/README.md)                                                    | Local NTP server for devices without internet access                     |
