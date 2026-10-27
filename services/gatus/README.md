@@ -25,3 +25,5 @@ This stack also runs a custom **gatus-generator** container. Gatus only reads a 
 5. `gatus.alert=true` on a container sends an ntfy notification when that endpoint fails three checks in a row, and again when it recovers. It's opt-in per endpoint: monitoring everything is useful, but being paged for everything isn't. The `alerting` block only appears in `config.yaml` once at least one container carries the label.
 
 6. Alerting needs `NTFY_TOKEN` in gatus's `secret.sops.env` — a token for the `gatus` account on ntfy, which has write-only access to the `alerts` topic. The generator writes the literal string `${NTFY_TOKEN}` into `config.yaml` and Gatus expands it at load, so the token never lands in the file. Without the variable set, Gatus starts but every alert gets a 401 from ntfy.
+
+7. The dashboard is behind the Authentik login wall, not Gatus's built-in OIDC. OIDC would also lock the status API that Homepage's Gatus widget reads, and Gatus has no accounts to sign in to anyway. Homepage's widget uses `gatus:8080` directly, and its embedded `gatus-overview` frame passes the wall on the same Authentik session as the dashboard.

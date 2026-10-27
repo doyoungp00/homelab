@@ -21,6 +21,10 @@ services:
       - traefik.http.routers.gatus.rule=Host(`gatus.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.gatus.tls=true
       - traefik.http.routers.gatus.tls.certresolver=cloudflare
+      # The login wall rather than Gatus's own OIDC: that would also lock
+      # /api/v1/endpoints/statuses, which Homepage's widget reads without a
+      # session. Homepage reaches gatus:8080 directly, so the wall skips it.
+      - traefik.http.routers.gatus.middlewares=authentik@docker
       - traefik.http.services.gatus.loadbalancer.server.port=8080
       # Homepage
       - homepage.group=Infra
