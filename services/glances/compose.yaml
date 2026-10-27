@@ -7,10 +7,14 @@ services:
         required: false
       - path: ../shared/env/base.env
     environment:
-      - GLANCES_OPT=-C /glances/conf/glances.conf -w --enable-mcp --enable-plugin smart
+      # -B: listen only on the `proxy` network's gateway, the host's own
+      # address on that bridge. Traefik, Homepage, and Gatus reach it there;
+      # the LAN doesn't, so the unauthenticated UI, API, and MCP endpoint stay
+      # behind the Authentik wall on glances.${DOMAIN_LOCAL}.
+      - GLANCES_OPT=-C /glances/conf/glances.conf -w -B 172.16.25.1 --enable-mcp --enable-plugin smart
       - PYTHONPYCACHEPREFIX=/tmp/py_caches
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:61208/api/4/status"]
+      test: ["CMD", "curl", "-f", "http://172.16.25.1:61208/api/4/status"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -23,7 +27,7 @@ services:
     network_mode: "host"
     # network_mode: host and `networks:` are mutually exclusive, so this
     # service can't join the shared `proxy` network at all. It's reachable
-    # directly via ${HOST_IP}, not a container DNS name. See Traefik label below.
+    # at the network's gateway, 172.16.25.1, not a container DNS name.
 
     read_only: true
     privileged: false
@@ -80,7 +84,7 @@ services:
       - traefik.http.routers.glances.tls=true
       - traefik.http.routers.glances.tls.certresolver=cloudflare
       - traefik.http.routers.glances.middlewares=authentik@docker
-      - "traefik.http.services.glances.loadbalancer.server.url=http://${HOST_IP:?HOST_IP not set}:61208"
+      - "traefik.http.services.glances.loadbalancer.server.url=http://172.16.25.1:61208"
       # Homepage
       - homepage.group=Infra
       - homepage.name=Glances
@@ -91,6 +95,6 @@ services:
       - gatus.enable=true
       - gatus.name=Glances
       - gatus.group=Infra
-      - "gatus.url=http://${HOST_IP:?HOST_IP not set}:61208/api/4/status"
+      - "gatus.url=http://172.16.25.1:61208/api/4/status"
       - gatus.interval=1m
       - 'gatus.conditions=["[STATUS] == 200"]'

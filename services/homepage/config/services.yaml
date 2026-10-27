@@ -70,13 +70,13 @@
             - Processes:
                   widget:
                       type: glances
-                      url: http://{{HOMEPAGE_VAR_HOST_IP}}:61208
+                      url: http://172.16.25.1:61208
                       version: 4
                       metric: process
             - Containers:
                   widget:
                       type: glances
-                      url: http://{{HOMEPAGE_VAR_HOST_IP}}:61208
+                      url: http://172.16.25.1:61208
                       version: 4
                       metric: containers
             - OS:
@@ -98,25 +98,25 @@
             - CPU:
                   widget:
                       type: glances
-                      url: http://{{HOMEPAGE_VAR_HOST_IP}}:61208
+                      url: http://172.16.25.1:61208
                       version: 4
                       metric: cpu
             - Memory:
                   widget:
                       type: glances
-                      url: http://{{HOMEPAGE_VAR_HOST_IP}}:61208
+                      url: http://172.16.25.1:61208
                       version: 4
                       metric: memory
             - Network:
                   widget:
                       type: glances
-                      url: http://{{HOMEPAGE_VAR_HOST_IP}}:61208
+                      url: http://172.16.25.1:61208
                       version: 4
                       metric: network:br0
             - "CPU Temp":
                   widget:
                       type: glances
-                      url: http://{{HOMEPAGE_VAR_HOST_IP}}:61208
+                      url: http://172.16.25.1:61208
                       version: 4
                       metric: sensor:Package id 0
 
