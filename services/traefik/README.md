@@ -18,10 +18,12 @@ Traefik is a reverse proxy that routes requests to each service by hostname and 
 
 1. Traefik uses ports 80 and 443, so ensure the host isn't already using them. For example, configure TrueNAS to serve its web UI at ports 81 and 444.
 
-2. The dashboard is only available through the `traefik` router, with basic auth. The insecure API on port 8080 is disabled, since it would expose the full config (including `CROWDSEC_LAPI_KEY`) to every container on `proxy`.
+2. The dashboard is only available through the `traefik` router, behind the Authentik login wall. The insecure API on port 8080 is disabled, since it would expose the full config (including `CROWDSEC_LAPI_KEY`) to every container on `proxy`. Homepage's widget can't get past the wall, so it reads `/api` through the `traefik-api` router instead: on the internal `traefik` entrypoint (:8080, not published), behind basic auth.
 
 3. The basic auth hash uses `{SHA}` rather than bcrypt, because a `$` in the hash would be eaten by compose interpolation. That's only acceptable because the password is long and random.
 
 4. If the public domains are proxied through Cloudflare, Cloudflare's IP ranges must be trusted, or CrowdSec will ban Cloudflare itself. See the commented lines in `compose.yaml`.
 
 5. Access logs go to stdout for CrowdSec to read, and are capped at three 10MB files by the `logging` block.
+
+6. The `authentik` middleware (the login wall) is declared here too, for the same reason as `crowdsec`: a router that references a missing middleware is dropped. See the Authentik README.

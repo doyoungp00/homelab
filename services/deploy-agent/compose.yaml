@@ -52,6 +52,9 @@ services:
       - traefik.http.routers.deploy-agent.rule=Host(`deploy-agent.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.deploy-agent.tls=true
       - traefik.http.routers.deploy-agent.tls.certresolver=cloudflare
+      # The GUI's POST /deploy carries the session cookie like any other
+      # request; X-Deploy-Secret stays required behind the wall too.
+      - traefik.http.routers.deploy-agent.middlewares=authentik@docker
       - traefik.http.services.deploy-agent.loadbalancer.server.port=9000
       # Homepage
       - homepage.group=Infra

@@ -39,6 +39,10 @@ services:
       - traefik.http.routers.adguardhome.rule=Host(`adguard.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.adguardhome.tls=true
       - traefik.http.routers.adguardhome.tls.certresolver=cloudflare
+      # AdGuard keeps its own login too: it can only be turned off by
+      # emptying `users:` in AdGuardHome.yaml, which would leave the API open
+      # to every container on `proxy`.
+      - traefik.http.routers.adguardhome.middlewares=authentik@docker
       - traefik.http.services.adguardhome.loadbalancer.server.port=3000
       # Homepage
       - homepage.group=Infra

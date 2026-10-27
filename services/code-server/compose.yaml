@@ -2,12 +2,15 @@ services:
   code-server:
     container_name: code-server
     build: .
+    # Appended to the image's entrypoint (`--bind-addr 0.0.0.0:8080 .`). No
+    # login of its own: the Authentik wall on the code-server router is the
+    # login, and the flag outranks `auth:` in the generated config.yaml.
+    command: ["--auth", "none"]
     env_file:
       - path: .env
         required: false
       - path: ../shared/env/base.env
     environment:
-      - PASSWORD=${PASSWORD:?PASSWORD not set}
       - HOME=/home/coder
       - XDG_DATA_HOME=/home/coder/.local/share
       - XDG_CONFIG_HOME=/home/coder/.config
@@ -38,6 +41,7 @@ services:
       - traefik.http.routers.code-server.rule=Host(`code.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.code-server.tls=true
       - traefik.http.routers.code-server.tls.certresolver=cloudflare
+      - traefik.http.routers.code-server.middlewares=authentik@docker
       - traefik.http.services.code-server.loadbalancer.server.port=8080
       # Homepage
       - homepage.group=Services

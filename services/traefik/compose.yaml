@@ -83,7 +83,14 @@ services:
       - traefik.http.routers.traefik.tls=true
       - traefik.http.routers.traefik.tls.certresolver=cloudflare
       - traefik.http.routers.traefik.service=api@internal
-      - traefik.http.routers.traefik.middlewares=traefik-auth
+      - traefik.http.routers.traefik.middlewares=authentik@docker
+      # Homepage's widget can't pass the login wall, so it reads the API
+      # through this router instead: on the internal `traefik` entrypoint
+      # (:8080, unpublished), /api only, behind basic auth.
+      - traefik.http.routers.traefik-api.entrypoints=traefik
+      - traefik.http.routers.traefik-api.rule=PathPrefix(`/api`)
+      - traefik.http.routers.traefik-api.service=api@internal
+      - traefik.http.routers.traefik-api.middlewares=traefik-auth
       # {SHA} rather than bcrypt/apr1: decrypt_secrets writes .env unquoted,
       # so a `$` in the hash would be eaten by compose interpolation. Unsalted
       # SHA-1 is only acceptable because the password is 32 random chars.
@@ -93,6 +100,9 @@ services:
       - traefik.http.routers.truenas.tls=true
       - traefik.http.routers.truenas.tls.certresolver=cloudflare
       - traefik.http.routers.truenas.service=truenas
+      # In front of TrueNAS's own login, which stays. Only covers this
+      # hostname: the UI is still reachable at the host IP directly.
+      - traefik.http.routers.truenas.middlewares=authentik@docker
       - "traefik.http.services.truenas.loadbalancer.server.url=http://${HOST_IP:?HOST_IP not set}:81"
       # CrowdSec bouncer + AppSec WAF, wired into websecure above.
       # Declared on Traefik's own labels rather than on the crowdsec
@@ -141,8 +151,9 @@ services:
       - "homepage.href=https://traefik.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
       - homepage.description=Web server and reverse proxy
       - homepage.widget.type=traefik
-      # Through the authenticated router; :8080 no longer serves the API.
-      - "homepage.widget.url=https://traefik.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      # The basic-auth traefik-api router on :8080; the public one is behind
+      # the login wall.
+      - "homepage.widget.url=http://traefik:8080"
       - homepage.widget.username=${TRAEFIK_DASHBOARD_USER:-}
       - homepage.widget.password=${TRAEFIK_DASHBOARD_PASSWORD:-}
       # Gatus
