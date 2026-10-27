@@ -10,7 +10,7 @@ The Arr Stack has no indexer for books and music. Soulseek is a separate network
 
 # Notes
 
-1. The web UI login comes from `SLSKD_WEB_USERNAME` and `SLSKD_WEB_PASSWORD`, both required. slskd falls back to `slskd` / `slskd` when they're unset, and refuses to start on an empty string. They apply only while `slskd.yml` has no `web.authentication` section: YAML loads after the environment, so changing the password from the web UI writes one there and quietly takes precedence from then on. Change the secret and redeploy instead.
+1. slskd's own web login is disabled (`SLSKD_NO_AUTH`). The login is the Authentik wall on the `slskd` router, which only admits the `admins` group. This holds only while `slskd.yml` has no `web.authentication` section: YAML loads after the environment, so a section written there (e.g. by changing settings from the web UI) quietly takes precedence. Anything on the `proxy` network can reach `slskd:5030` without logging in.
 
 2. `SLSKD_SLSK_USERNAME` and `SLSKD_SLSK_PASSWORD` are the Soulseek network login, and are optional. Without them slskd starts and serves its UI as usual, but never connects to the network.
 

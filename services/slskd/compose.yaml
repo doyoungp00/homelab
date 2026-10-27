@@ -21,17 +21,10 @@ services:
       # role and CIDR prefix would survive on its own, and slskd rejects a
       # prefix with a zero-length key rather than ignoring it.
       - "SLSKD_API_KEY=${SLSKD_HOMEPAGE_KEY:+role=ReadOnly;cidr=172.16.25.0/24;}${SLSKD_HOMEPAGE_KEY:-}"
-      # Web UI login. Required rather than defaulted: slskd falls back to
-      # slskd/slskd when these are unset, and refuses to start on an empty
-      # string, so neither kind of blank is safe.
-      #
-      # These hold only while slskd.yml has no web.authentication section.
-      # It's generated fully commented out, so they apply on a fresh install,
-      # but YAML loads after the environment — changing the password from the
-      # web UI writes a real key there and silently wins from then on. Change
-      # it here and redeploy instead.
-      - SLSKD_USERNAME=${SLSKD_WEB_USERNAME:?SLSKD_WEB_USERNAME not set}
-      - SLSKD_PASSWORD=${SLSKD_WEB_PASSWORD:?SLSKD_WEB_PASSWORD not set}
+      # No web login of its own: the Authentik wall on the slskd router is the
+      # login. Holds only while slskd.yml has no web.authentication section,
+      # since YAML loads after the environment and would silently win.
+      - SLSKD_NO_AUTH=true
       # Soulseek network login. Optional: slskd starts and serves its UI
       # without them, it just never connects to the network.
       - SLSKD_SLSK_USERNAME=${SLSKD_SLSK_USERNAME:-}
@@ -67,6 +60,7 @@ services:
       - traefik.http.routers.slskd.rule=Host(`slskd.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.slskd.tls=true
       - traefik.http.routers.slskd.tls.certresolver=cloudflare
+      - traefik.http.routers.slskd.middlewares=authentik@docker
       - traefik.http.services.slskd.loadbalancer.server.port=5030
       # Homepage
       - homepage.group=Downloads
