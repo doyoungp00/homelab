@@ -31,6 +31,7 @@ services:
       - traefik.http.routers.bazarr.rule=Host(`bazarr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.bazarr.tls=true
       - traefik.http.routers.bazarr.tls.certresolver=cloudflare
+      - traefik.http.routers.bazarr.middlewares=authentik@docker
       - traefik.http.services.bazarr.loadbalancer.server.port=6767
       # Homepage
       - homepage.group=Downloads
@@ -85,6 +86,7 @@ services:
       - traefik.http.routers.cleanuparr.rule=Host(`cleanuparr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.cleanuparr.tls=true
       - traefik.http.routers.cleanuparr.tls.certresolver=cloudflare
+      - traefik.http.routers.cleanuparr.middlewares=authentik@docker
       - traefik.http.services.cleanuparr.loadbalancer.server.port=11011
       # Homepage
       - homepage.group=Downloads
@@ -157,6 +159,10 @@ services:
       - path: .env
         required: false
       - path: ../shared/env/base.env
+    environment:
+      # Login is the Authentik wall on the prowlarr router; the app trusts
+      # whatever reaches it. The API still requires its key.
+      - PROWLARR__AUTH__METHOD=External
     healthcheck:
       interval: 30s
       retries: 3
@@ -188,6 +194,9 @@ services:
       - path: .env
         required: false
       - path: ../shared/env/base.env
+    environment:
+      # See prowlarr.
+      - RADARR__AUTH__METHOD=External
     healthcheck:
       interval: 30s
       retries: 3
@@ -213,6 +222,7 @@ services:
       - traefik.http.routers.radarr.rule=Host(`radarr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.radarr.tls=true
       - traefik.http.routers.radarr.tls.certresolver=cloudflare
+      - traefik.http.routers.radarr.middlewares=authentik@docker
       - traefik.http.services.radarr.loadbalancer.server.port=7878
       # Homepage
       - homepage.group=Downloads
@@ -296,6 +306,9 @@ services:
       - path: .env
         required: false
       - path: ../shared/env/base.env
+    environment:
+      # See prowlarr.
+      - SONARR__AUTH__METHOD=External
     healthcheck:
       interval: 30s
       retries: 3
@@ -321,6 +334,7 @@ services:
       - traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.sonarr.tls=true
       - traefik.http.routers.sonarr.tls.certresolver=cloudflare
+      - traefik.http.routers.sonarr.middlewares=authentik@docker
       - traefik.http.services.sonarr.loadbalancer.server.port=8989
       # Homepage
       - homepage.group=Downloads
@@ -408,6 +422,7 @@ services:
       - traefik.http.routers.prowlarr.tls=true
       - traefik.http.routers.prowlarr.tls.certresolver=cloudflare
       - traefik.http.routers.prowlarr.service=prowlarr
+      - traefik.http.routers.prowlarr.middlewares=authentik@docker
       - traefik.http.services.prowlarr.loadbalancer.server.port=9696
       - gatus.enable=true
       - gatus.name=Prowlarr
@@ -427,6 +442,7 @@ services:
       - traefik.http.routers.qbittorrent.tls=true
       - traefik.http.routers.qbittorrent.tls.certresolver=cloudflare
       - traefik.http.routers.qbittorrent.service=qbittorrent
+      - traefik.http.routers.qbittorrent.middlewares=authentik@docker
       - traefik.http.services.qbittorrent.loadbalancer.server.port=8080
       - gatus[1].name=qBittorrent
       - gatus[1].group=arr Stack
@@ -434,6 +450,8 @@ services:
       - gatus[1].interval=5m
       - 'gatus[1].conditions=["[STATUS] == 200", "[RESPONSE_TIME] < 1000"]'
       # Suwayomi Traefik/Gatus
+      # Deliberately not behind the Authentik wall: manga apps connect to it
+      # directly and can't follow a login redirect, so it keeps its own login.
       - traefik.http.routers.suwayomi.rule=Host(`suwayomi.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.suwayomi.tls=true
       - traefik.http.routers.suwayomi.tls.certresolver=cloudflare

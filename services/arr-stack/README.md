@@ -68,3 +68,7 @@ The conventional method of searching for media, downloading it, renaming each fi
 7. qBittorrent, Radarr, and Sonarr must all mount the torrent folder at the same path (`/downloads`). Otherwise Radarr and Sonarr can't find the files qBittorrent reports as finished.
 
 8. If the VPN connection drops, containers behind Gluetun lose internet access entirely rather than falling back to the home IP. This is intended, as it prevents leaks.
+
+9. Every web UI here except Seerr and Suwayomi is behind the Authentik login wall (see the Authentik README), which only admits the `admins` group. Sonarr, Radarr, and Prowlarr are set to `External` authentication through `*__AUTH__METHOD`, so they don't ask for a second login; their APIs still require their keys. Bazarr's authentication is set to none, and qBittorrent bypasses its login for the `proxy` subnet. Cleanuparr logs in through OIDC against the `cleanuparr` application in Authentik, linked to the admin account. All three are settings in their own config, not in this repo. Anything on the `proxy` network can therefore reach these UIs directly without logging in.
+
+10. Seerr is left out because its users log in with their Jellyfin accounts. Suwayomi is left out because manga apps connect to it directly and can't follow a login redirect, so it keeps its own login.
