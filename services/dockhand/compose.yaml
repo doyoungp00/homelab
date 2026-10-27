@@ -22,6 +22,9 @@ services:
       - traefik.http.routers.dockhand.rule=Host(`dockhand.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.dockhand.tls=true
       - traefik.http.routers.dockhand.tls.certresolver=cloudflare
+      # Both the login wall and Dockhand's own OIDC login: it drives the Docker
+      # socket, so the wall keeps even its login page off the network.
+      - traefik.http.routers.dockhand.middlewares=authentik@docker
       - traefik.http.services.dockhand.loadbalancer.server.port=3000
       # Homepage
       - homepage.group=Infra
