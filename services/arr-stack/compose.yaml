@@ -132,6 +132,8 @@ services:
       - traefik.http.routers.flaresolverr.rule=Host(`flaresolverr.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.flaresolverr.tls=true
       - traefik.http.routers.flaresolverr.tls.certresolver=cloudflare
+      # Prowlarr calls flaresolverr:8191 directly, not through this router.
+      - traefik.http.routers.flaresolverr.middlewares=authentik@docker
       - traefik.http.services.flaresolverr.loadbalancer.server.port=8191
       # Homepage
       - homepage.group=Downloads

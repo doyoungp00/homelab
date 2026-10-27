@@ -43,6 +43,7 @@ services:
       - traefik.http.routers.homepage.rule=Host(`dash.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.homepage.tls=true
       - traefik.http.routers.homepage.tls.certresolver=cloudflare
+      - traefik.http.routers.homepage.middlewares=authentik@docker
       - traefik.http.services.homepage.loadbalancer.server.port=3000
       # Gatus
       - gatus.enable=true

@@ -119,6 +119,15 @@ services:
       # being locked out of the stack from inside the house is the worse
       # failure. Narrow this if the LAN is smaller than the RFC1918 blocks.
       - "traefik.http.middlewares.crowdsec.plugin.bouncer.clienttrustedips=127.0.0.1/32,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+      # Authentik login wall. Routers opt in with
+      # `traefik.http.routers.<name>.middlewares=authentik@docker`.
+      # Declared here rather than on authentik-server for the same reason as
+      # crowdsec: an authentik that's down then fails requests closed (500)
+      # instead of making Traefik drop every router that references it.
+      - "traefik.http.middlewares.authentik.forwardauth.address=http://authentik-server:9000/outpost.goauthentik.io/auth/traefik"
+      # Replaces any client-sent header of the same name, so apps behind the
+      # wall can trust these for who's logged in.
+      - "traefik.http.middlewares.authentik.forwardauth.authResponseHeaders=X-authentik-username,X-authentik-groups,X-authentik-email,X-authentik-name,X-authentik-uid"
       # If cloud./jellyfin./navidrome. are proxied through Cloudflare (orange
       # cloud), the client IP arrives in X-Forwarded-For behind a Cloudflare
       # edge IP. Without these two, CrowdSec bans Cloudflare and all three

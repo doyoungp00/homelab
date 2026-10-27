@@ -46,6 +46,7 @@ services:
       - traefik.http.routers.scrutiny.rule=Host(`scrutiny.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.scrutiny.tls=true
       - traefik.http.routers.scrutiny.tls.certresolver=cloudflare
+      - traefik.http.routers.scrutiny.middlewares=authentik@docker
       - traefik.http.services.scrutiny.loadbalancer.server.port=8080
       # Homepage
       - homepage.group=Infra

@@ -43,7 +43,7 @@ services:
       - homepage.group=Infra
       - homepage.name=Authentik
       - homepage.icon=authentik.png
-      - "homepage.href=https://auth.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - "homepage.href=https://auth.${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set}"
       - homepage.description=Single sign-on for every service
       # Gatus
       - gatus.enable=true

@@ -21,3 +21,7 @@ Authentik is an identity provider: one account per person, used to log in to eve
 4. The worker has no Docker socket, unlike upstream's compose. Outposts (e.g. LDAP) are added as services in this compose file instead of being created by Authentik.
 
 5. Users, groups, and application settings live in the database under `${MNT_APPDATA}/authentik/postgres`, not in this repo.
+
+6. Use `https://auth.${DOMAIN_PUBLIC}` everywhere: as the login wall's authentication URL and as every OIDC app's issuer. Authentik builds the issuer from the hostname it was reached on, so an app configured with the other hostname rejects its tokens. Containers and LAN clients must be able to reach the public hostname too, through hairpin NAT or an AdGuard rewrite.
+
+7. The login wall is the `authentik` middleware, declared on Traefik's labels. A router opts in with `traefik.http.routers.<name>.middlewares=authentik@docker`. It's backed by a domain-level proxy provider (cookie domain `${DOMAIN_PUBLIC}`, which also covers `${DOMAIN_LOCAL}`) whose application only allows the `admins` group, so every service behind the wall shares that one rule. Homepage widgets for those services must use internal URLs, or they hit the login page.

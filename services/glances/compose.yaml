@@ -79,6 +79,7 @@ services:
       - traefik.http.routers.glances.rule=Host(`glances.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.glances.tls=true
       - traefik.http.routers.glances.tls.certresolver=cloudflare
+      - traefik.http.routers.glances.middlewares=authentik@docker
       - "traefik.http.services.glances.loadbalancer.server.url=http://${HOST_IP:?HOST_IP not set}:61208"
       # Homepage
       - homepage.group=Infra
