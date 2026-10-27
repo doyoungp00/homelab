@@ -109,6 +109,7 @@ class DeployModule(Protocol):
     LOCK_FILE: Path
     BRANCH: str
     SELF_SERVICE_NAME: str
+    PULL_TIMEOUT_SECONDS: int
 
     class DeployError(RuntimeError): ...
 

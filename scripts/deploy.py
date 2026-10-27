@@ -44,6 +44,17 @@ BRANCH = os.environ.get("BRANCH", "main")
 # constant they can simply state.
 PROXY_SUBNET = "172.16.25.0/24"
 
+# A registry that stalls mid-pull would otherwise hold the deploy lock forever
+# and leave every service after this one unapplied. Pulling is best-effort
+# anyway (`up` falls back to the image already on the host), so a timeout is
+# treated exactly like a failed pull.
+PULL_TIMEOUT_SECONDS = 300
+
+# Applied before everything else, in this order. Traefik owns the middlewares
+# other routers reference (crowdsec, authentik); a router deployed before its
+# middleware exists is dropped by Traefik and 404s until Traefik catches up.
+DEPLOY_FIRST = ("traefik",)
+
 
 class DeployError(RuntimeError):
     """Raised when a git or docker command fails."""
@@ -85,17 +96,24 @@ def apply_service(service_dir: Path) -> None:
     # Before `up`, so a hook can create the bind mount's source directory and
     # seed config the container reads at startup.
     hook_changed = fire_hook("pre_deploy", service_dir)
-    subprocess.run(
-        [
-            "docker",
-            "compose",
-            "--project-directory",
-            str(service_dir),
-            "pull",
-            "--quiet",
-        ],
-        check=False,
-    )
+    try:
+        subprocess.run(
+            [
+                "docker",
+                "compose",
+                "--project-directory",
+                str(service_dir),
+                "pull",
+                "--quiet",
+            ],
+            check=False,
+            timeout=PULL_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        log(
+            f"WARNING: {service_dir.name}: pull timed out after "
+            f"{PULL_TIMEOUT_SECONDS}s, continuing with the local image"
+        )
     # docker compose up decides whether to recreate a container by hashing the
     # resolved compose config, not by checking whether a rebuilt image's digest
     # changed — so a `build:` service can get a new image that `up` then leaves
@@ -140,9 +158,7 @@ def ensure_network(name: str) -> None:
     safe to call on every deploy regardless of which services actually
     changed, or which order they get applied in.
     """
-    exists = subprocess.run(
-        ["docker", "network", "inspect", name], capture_output=True
-    )
+    exists = subprocess.run(["docker", "network", "inspect", name], capture_output=True)
     if exists.returncode != 0:
         log(f"creating shared network {name} on {PROXY_SUBNET}")
         subprocess.run(
@@ -181,13 +197,24 @@ def all_service_dirs() -> list[Path]:
     client-issued calls, and killing the client mid-sequence (which
     self-recreation does, by definition) can leave a half-finished
     container with nothing left alive to complete it. Update deploy-agent
-    by hand instead."""
+    by hand instead.
+
+    Ordered DEPLOY_FIRST first, then alphabetically."""
+
+    def order(p: Path) -> tuple[int, str]:
+        if p.name in DEPLOY_FIRST:
+            return (DEPLOY_FIRST.index(p.name), "")
+        return (len(DEPLOY_FIRST), p.name)
+
     return sorted(
-        p
-        for p in SERVICES_DIR.iterdir()
-        if p.is_dir()
-        and p.name not in ("shared", SELF_SERVICE_NAME)
-        and (p / "compose.yaml").is_file()
+        (
+            p
+            for p in SERVICES_DIR.iterdir()
+            if p.is_dir()
+            and p.name not in ("shared", SELF_SERVICE_NAME)
+            and (p / "compose.yaml").is_file()
+        ),
+        key=order,
     )
 
 

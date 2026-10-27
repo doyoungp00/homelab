@@ -48,8 +48,43 @@ class TestAllServiceDirs:
 
         assert names == ["alpha"]
 
+    def test_traefik_is_ordered_before_everything_else(
+        self, deploy_paths: DeployModule
+    ) -> None:
+        for name in ["alpha", "zeta", "traefik"]:
+            (deploy_paths.SERVICES_DIR / name).mkdir(parents=True, exist_ok=True)
+            (deploy_paths.SERVICES_DIR / name / "compose.yaml").write_text("")
+
+        names = [p.name for p in deploy_paths.all_service_dirs()]
+
+        assert names == ["traefik", "alpha", "zeta"]
+
 
 class TestApplyService:
+    def test_pull_timeout_still_runs_up(
+        self,
+        deploy_paths: DeployModule,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        calls: list[list[str]] = []
+
+        def fake_run(args: list[str], **kwargs: object) -> None:
+            calls.append(args)
+            if "pull" in args:
+                assert kwargs.get("timeout") == deploy_paths.PULL_TIMEOUT_SECONDS
+                raise subprocess.TimeoutExpired(args, kwargs["timeout"])
+
+        monkeypatch.setattr(deploy_paths.subprocess, "run", fake_run)
+        service_dir = deploy_paths.SERVICES_DIR / "svc"
+        service_dir.mkdir(parents=True)
+        (service_dir / "compose.yaml").write_text("services:\n  svc:\n    image: foo:latest\n")
+
+        deploy_paths.apply_service(service_dir)
+
+        assert "up" in calls[1]
+        assert "svc: pull timed out" in capsys.readouterr().out
+
     def test_image_based_service_is_not_force_recreated(
         self, deploy_paths: DeployModule, monkeypatch: pytest.MonkeyPatch
     ) -> None:
