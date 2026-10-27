@@ -1,0 +1,12 @@
+# Groups that applications bind access to. Members are managed in the UI,
+# not here: listing `users` would reset membership on every apply.
+version: 1
+metadata:
+  name: homelab - groups
+entries:
+  - model: authentik_core.group
+    identifiers:
+      name: admins
+  - model: authentik_core.group
+    identifiers:
+      name: family

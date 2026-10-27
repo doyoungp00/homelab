@@ -1,0 +1,52 @@
+# The forward-auth login wall behind Traefik's `authentik` middleware.
+# Domain-level: one session cookie for DOMAIN_PUBLIC covers every subdomain,
+# DOMAIN_LOCAL included, and every router using the middleware shares this
+# application's one access rule (admins only).
+version: 1
+metadata:
+  name: homelab - login wall
+entries:
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        path: homelab/groups.yaml
+      required: true
+
+  - model: authentik_providers_proxy.proxyprovider
+    id: provider
+    identifiers:
+      name: forward-auth
+    attrs:
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      mode: forward_domain
+      external_host: !Format ["https://auth.%s", !Env DOMAIN_PUBLIC]
+      cookie_domain: !Env DOMAIN_PUBLIC
+
+  - model: authentik_core.application
+    id: application
+    identifiers:
+      slug: home-admin-tools
+    attrs:
+      name: Home admin tools
+      provider: !KeyOf provider
+
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf application
+      group: !Find [authentik_core.group, [name, admins]]
+    attrs:
+      order: 0
+
+  # Replaces the outpost's provider list and config wholesale. Any other proxy
+  # provider meant to run on the embedded outpost has to be listed here too,
+  # and config keys left out fall back to authentik's defaults.
+  - model: authentik_outposts.outpost
+    identifiers:
+      managed: goauthentik.io/outposts/embedded
+    attrs:
+      providers:
+        - !KeyOf provider
+      config:
+        # Used to build login redirects. Wrong or empty means redirect loops.
+        authentik_host: !Format ["https://auth.%s/", !Env DOMAIN_PUBLIC]

@@ -20,7 +20,11 @@ Authentik is an identity provider: one account per person, used to log in to eve
 
 4. The worker has no Docker socket, unlike upstream's compose. Outposts (e.g. LDAP) are added as services in this compose file instead of being created by Authentik.
 
-5. Users, groups, and application settings live in the database under `${MNT_APPDATA}/authentik/postgres`, not in this repo.
+5. Groups, providers, applications, and their access bindings are defined as blueprints in `blueprints/`. `hooks.py` copies them to `${MNT_APPDATA}/authentik/blueprints`, which the worker mounts at `/blueprints/homelab` and applies whenever a file changes (and hourly). Anything a blueprint sets is reverted on the next apply if edited in the UI, so change it here. Users, their passwords and MFA, and group membership aren't in blueprints and live only in the database under `${MNT_APPDATA}/authentik/postgres`.
+
+8. Blueprint inputs are passed to the worker as plain environment variables (`DOMAIN_*`, `<APP>_OIDC_CLIENT_ID`, `<APP>_OIDC_CLIENT_SECRET`), each required in `compose.yaml` so a missing secret fails the deploy. Don't prefix them with `AUTHENTIK_`: authentik reads every such variable as its own setting. The app's side of an OIDC login (issuer, client ID and secret) usually lives in the app's own settings and has to be entered there to match.
+
+9. Removing a blueprint from `blueprints/` stops it being applied, but leaves the objects it created. Delete those in the UI.
 
 6. Use `https://auth.${DOMAIN_PUBLIC}` everywhere: as the login wall's authentication URL and as every OIDC app's issuer. Authentik builds the issuer from the hostname it was reached on, so an app configured with the other hostname rejects its tokens. Containers and LAN clients must be able to reach the public hostname too, through hairpin NAT or an AdGuard rewrite.
 

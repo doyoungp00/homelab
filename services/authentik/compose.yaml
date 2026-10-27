@@ -73,6 +73,12 @@ services:
       AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS:?PG_PASS not set}
       AUTHENTIK_POSTGRESQL__USER: authentik
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?AUTHENTIK_SECRET_KEY not set}
+      # Read by blueprints through !Env. Listed explicitly so a missing value
+      # fails the deploy, instead of a blueprint writing an empty secret.
+      DOMAIN_LOCAL: ${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}
+      DOMAIN_PUBLIC: ${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set}
+      CLEANUPARR_OIDC_CLIENT_ID: ${CLEANUPARR_OIDC_CLIENT_ID:?CLEANUPARR_OIDC_CLIENT_ID not set}
+      CLEANUPARR_OIDC_CLIENT_SECRET: ${CLEANUPARR_OIDC_CLIENT_SECRET:?CLEANUPARR_OIDC_CLIENT_SECRET not set}
     image: ghcr.io/goauthentik/server:2026.8.5
     networks:
       - authentik
@@ -80,6 +86,8 @@ services:
     shm_size: 512mb
     volumes:
       - ${MNT_APPDATA:?MNT_APPDATA not set}/authentik/data:/data
+      # Copied from ./blueprints by hooks.py; see there for why not mounted directly.
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/authentik/blueprints:/blueprints/homelab:ro
 
   authentik-db:
     container_name: authentik-db
