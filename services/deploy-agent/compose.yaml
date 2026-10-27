@@ -24,11 +24,10 @@ services:
       # every service in the stack, which can take minutes.
       start_period: 180s
       test:
-        # GET / serves the deploy GUI (200). Deliberately no -f anyway: this
-        # only needs to prove the HTTP server is alive and responding, not
-        # that this particular route succeeds.
+        # /health answers 204 and is left out of the agent's request log, so
+        # polling it every 30s doesn't bury deploy output.
         - CMD-SHELL
-        - curl -sS http://127.0.0.1:9000/ -o /dev/null || exit 1
+        - curl -fsS http://127.0.0.1:9000/health -o /dev/null || exit 1
       timeout: 10s
     networks:
       - proxy
@@ -66,7 +65,7 @@ services:
       - gatus.enable=true
       - gatus.name=Deploy Agent
       - gatus.group=Infra
-      - "gatus.url=http://deploy-agent:9000"
+      - "gatus.url=http://deploy-agent:9000/health"
       - gatus.interval=1m
       - 'gatus.conditions=["[STATUS] < 400"]'
 

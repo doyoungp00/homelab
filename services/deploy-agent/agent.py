@@ -33,6 +33,8 @@ POLL_INTERVAL_SECONDS = int(os.environ.get("POLL_INTERVAL_SECONDS", "900"))
 PORT = int(os.environ.get("PORT", "9000"))
 WEBHOOK_SECRET = os.environ["WEBHOOK_SECRET"]
 FAVICON_PATH = Path(__file__).parent / "favicon.png"
+# Polled by the container healthcheck and Gatus; answered, but never logged.
+HEALTH_PATH = "/health"
 
 # Mirrors all_service_dirs()'s exclusion in scripts/deploy.py: `shared` isn't
 # deployable, and `deploy-agent` can't safely redeploy itself mid-execution.
@@ -186,6 +188,10 @@ def deployable_service_names() -> list[str]:
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
+        if parsed.path == HEALTH_PATH:
+            self.send_response(204)
+            self.end_headers()
+            return
         if parsed.path == "/":
             body = PAGE_HTML.encode()
             self.send_response(200)
@@ -247,6 +253,10 @@ class Handler(BaseHTTPRequestHandler):
         )
 
     def log_message(self, fmt: str, *args) -> None:
+        # The healthcheck and Gatus poll every 30-60s; logging them buries
+        # deploy output.
+        if urlparse(self.path).path == HEALTH_PATH:
+            return
         log(fmt % args)
 
 
