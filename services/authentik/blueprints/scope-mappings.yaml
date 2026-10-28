@@ -1,0 +1,18 @@
+# Scope mappings shared by more than one provider.
+version: 1
+metadata:
+  name: homelab - scope mappings
+entries:
+  # Some apps (wg-easy, Dawarich) refuse any login whose email_verified is
+  # false, which is what the default email mapping always sends. Emails here
+  # are set by an admin, so this mapping vouches for them instead. Only for
+  # apps that need it: the others link accounts by email and are safer
+  # treating it as unverified.
+  - model: authentik_providers_oauth2.scopemapping
+    identifiers:
+      name: "homelab: OpenID 'email' (verified)"
+    attrs:
+      scope_name: email
+      description: Email address, marked verified
+      expression: |
+        return {"email": request.user.email, "email_verified": True}

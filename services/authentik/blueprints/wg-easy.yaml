@@ -14,19 +14,11 @@ entries:
       identifiers:
         path: homelab/groups.yaml
       required: true
-
-  # wg-easy refuses any login whose email_verified is false, which is what the
-  # default email mapping always sends. Emails here are set by an admin, so
-  # this mapping vouches for them instead.
-  - model: authentik_providers_oauth2.scopemapping
-    id: email_verified
-    identifiers:
-      name: "homelab: OpenID 'email' (verified)"
+  - model: authentik_blueprints.metaapplyblueprint
     attrs:
-      scope_name: email
-      description: Email address, marked verified
-      expression: |
-        return {"email": request.user.email, "email_verified": True}
+      identifiers:
+        path: homelab/scope-mappings.yaml
+      required: true
 
   - model: authentik_providers_oauth2.oauth2provider
     id: provider
@@ -51,7 +43,8 @@ entries:
       signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
       property_mappings:
         - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
-        - !KeyOf email_verified
+        # wg-easy refuses any login whose email_verified is false.
+        - !Find [authentik_providers_oauth2.scopemapping, [name, "homelab: OpenID 'email' (verified)"]]
         - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
 
   - model: authentik_core.application

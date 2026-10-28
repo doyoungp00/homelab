@@ -48,6 +48,18 @@ services:
       # One preloaded Puma worker is plenty for a household instance and
       # halves idle memory. Raise for busier instances.
       WEB_CONCURRENCY: ${WEB_CONCURRENCY:-1}
+      # Login through Authentik (authentik/blueprints/dawarich.yaml). The id
+      # and secret must match the copies in authentik's secret.sops.env.
+      OIDC_CLIENT_ID: ${DAWARICH_OIDC_CLIENT_ID:?DAWARICH_OIDC_CLIENT_ID not set}
+      OIDC_CLIENT_SECRET: ${DAWARICH_OIDC_CLIENT_SECRET:?DAWARICH_OIDC_CLIENT_SECRET not set}
+      OIDC_ISSUER: https://auth.${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set}/application/o/dawarich/
+      # Explicit: Dawarich otherwise builds it from APPLICATION_URL, which
+      # defaults to http://localhost:3000.
+      OIDC_REDIRECT_URI: https://dawarich.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}/users/auth/openid_connect/callback
+      OIDC_PROVIDER_NAME: Authentik
+      # New people get an account on first login. An existing account with the
+      # same email is only linked after its Dawarich password is entered.
+      OIDC_AUTO_REGISTER: "true"
       # Geocoding
       PHOTON_API_HOST: app.chibigeo.com/v1/photon
       PHOTON_API_KEY: ${PHOTON_API_KEY:-}
