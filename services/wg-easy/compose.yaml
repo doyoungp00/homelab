@@ -23,6 +23,16 @@ services:
       - INIT_PORT=51820
       - INIT_DNS=${HOST_IP:?HOST_IP not set}
       - DISABLE_IPV6=true
+      # Login through Authentik (authentik/blueprints/wg-easy.yaml). The id
+      # and secret must match the copies in authentik's secret.sops.env.
+      - OAUTH_PROVIDERS=oidc
+      - OAUTH_OIDC_NAME=Authentik
+      - OAUTH_OIDC_SERVER=https://auth.${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set}/application/o/wg-easy/
+      - OAUTH_OIDC_CLIENT_ID=${WG_EASY_OIDC_CLIENT_ID:?WG_EASY_OIDC_CLIENT_ID not set}
+      - OAUTH_OIDC_CLIENT_SECRET=${WG_EASY_OIDC_CLIENT_SECRET:?WG_EASY_OIDC_CLIENT_SECRET not set}
+      # Off: every wg-easy user is an administrator, so accounts are linked
+      # by hand from their settings instead of created on first login.
+      - OAUTH_AUTO_REGISTER=false
     image: ghcr.io/wg-easy/wg-easy:15
     # Single network on purpose: wg-easy's MASQUERADE hook is pinned to eth0,
     # and with a second network Docker is free to put the default route on
@@ -51,6 +61,9 @@ services:
       - traefik.http.routers.wg-easy.rule=Host(`wg-easy.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.wg-easy.tls=true
       - traefik.http.routers.wg-easy.tls.certresolver=cloudflare
+      # Both the login wall and wg-easy's own OIDC login: anyone signed in can
+      # manage the VPN. Homepage's widget uses wg-easy:51821, past the wall.
+      - traefik.http.routers.wg-easy.middlewares=authentik@docker
       - traefik.http.services.wg-easy.loadbalancer.server.port=51821
       # Homepage
       - homepage.group=Infra

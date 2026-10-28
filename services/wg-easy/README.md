@@ -19,3 +19,7 @@ wg-easy is a WireGuard VPN server with a web UI for managing clients.
 3. The `INIT_*` variables are only used on first start. Changing them afterwards does nothing. Use the web UI instead.
 
 4. IPv6 is disabled.
+
+5. The web UI is behind the Authentik login wall, and wg-easy's own login uses OIDC against the `wg-easy` application in Authentik (`authentik/blueprints/wg-easy.yaml`), which only the `admins` group can use. Both sides are in this repo: wg-easy reads its OIDC settings from `OAUTH_*` variables. `WG_EASY_OIDC_CLIENT_ID` and `WG_EASY_OIDC_CLIENT_SECRET` have to be set to the same values in both `wg-easy/secret.sops.env` and `authentik/secret.sops.env`.
+
+6. `OAUTH_AUTO_REGISTER` is off, because every wg-easy user is an administrator. An existing account is linked once by logging in with its password and linking Authentik from the account's settings. wg-easy also rejects any login whose `email_verified` claim is false, so the blueprint gives it its own email scope mapping that always sends true. Keep the password login (`INIT_USERNAME`) as a way back in; Homepage's widget uses it too.
