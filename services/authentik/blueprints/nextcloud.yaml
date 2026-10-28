@@ -1,0 +1,67 @@
+# OIDC login for Nextcloud, through its user_oidc app. Nextcloud's side
+# (provider, id mapping) lives in its database and is set with occ; see the
+# nextcloud-aio README. The client id and secret come from secret.sops.env so
+# both sides share one value.
+#
+# user_oidc matches existing accounts by user ID, taken from
+# preferred_username with --unique-uid=0, so a person's Authentik username
+# must equal their Nextcloud user ID.
+version: 1
+metadata:
+  name: homelab - nextcloud
+entries:
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        path: homelab/groups.yaml
+      required: true
+
+  - model: authentik_providers_oauth2.oauth2provider
+    id: provider
+    identifiers:
+      name: Provider for Nextcloud
+    attrs:
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      client_type: confidential
+      # Must be listed: the field defaults to empty, and a provider created by
+      # a blueprint (unlike the UI form) gets no defaults, so authentik rejects
+      # every login with invalid_request before showing a page.
+      grant_types: [authorization_code, refresh_token]
+      client_id: !Env NEXTCLOUD_OIDC_CLIENT_ID
+      client_secret: !Env NEXTCLOUD_OIDC_CLIENT_SECRET
+      redirect_uris:
+        # Nextcloud builds the callback from its configured domain (AIO's
+        # NC_DOMAIN), which is one of these; both are routed.
+        - matching_mode: strict
+          url: !Format ["https://cloud.%s/apps/user_oidc/code", !Env DOMAIN_PUBLIC]
+        - matching_mode: strict
+          url: !Format ["https://cloud.%s/apps/user_oidc/code", !Env DOMAIN_LOCAL]
+      signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
+
+  - model: authentik_core.application
+    id: application
+    identifiers:
+      slug: nextcloud
+    attrs:
+      name: Nextcloud
+      provider: !KeyOf provider
+      meta_launch_url: !Format ["https://cloud.%s", !Env DOMAIN_PUBLIC]
+
+  # Everyone: admins and family. Bindings are OR'd (policy engine mode "any").
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf application
+      group: !Find [authentik_core.group, [name, admins]]
+    attrs:
+      order: 0
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf application
+      group: !Find [authentik_core.group, [name, family]]
+    attrs:
+      order: 1
