@@ -12,7 +12,16 @@ and are removed in the UI).
 
 from __future__ import annotations
 
+import os
+
 BLUEPRINTS = "blueprints"
+
+# The user the server and worker run as (compose.yaml's `user:`), the same
+# apps user as the rest of the stack. deploy-agent writes as root, and the
+# appdata dataset's inherited ACL leaves new entries root-only (rwxrwx---), so
+# without this the worker can't even list the directory. Discovery then finds
+# nothing, and fails silently: no blueprint instances, no error in the UI.
+AUTHENTIK_UID = 568
 
 
 def pre_deploy(ctx):
@@ -26,6 +35,10 @@ def pre_deploy(ctx):
         for stale in dst_dir.glob("*.yaml"):
             if stale.name not in wanted:
                 stale.unlink()
+        for path in (dst_dir, *dst_dir.glob("*.yaml")):
+            st = path.stat()
+            if (st.st_uid, st.st_gid) != (AUTHENTIK_UID, AUTHENTIK_UID):
+                os.chown(path, AUTHENTIK_UID, AUTHENTIK_UID)
 
     # Never asks for a recreate. The worker watches the directory and applies
     # changed blueprints on its own, so restarting the stack (database

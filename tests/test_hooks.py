@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -663,3 +664,47 @@ class TestDeployIntegration:
             deploy_paths.apply_service(service_dir)
 
         assert calls == []
+
+
+class TestAuthentikHook:
+    """The real hook. Its ownership fix only matters on a host whose ACL hides
+    root-written files, which nothing else here would notice."""
+
+    def hook(self, tmp_path: Path) -> Path:
+        service_dir = tmp_path / "authentik"
+        (service_dir / "blueprints").mkdir(parents=True)
+        real = Path(__file__).resolve().parent.parent / "services/authentik/hooks.py"
+        (service_dir / "hooks.py").write_text(real.read_text())
+        (service_dir / "blueprints/groups.yaml").write_text("version: 1\n")
+        return service_dir
+
+    def test_hands_blueprints_to_the_authentik_user(
+        self, tmp_path: Path, appdata: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        chowned: list[tuple[str, int, int]] = []
+        monkeypatch.setattr(
+            "os.chown", lambda path, uid, gid: chowned.append((Path(path).name, uid, gid))
+        )
+        svc = self.hook(tmp_path)
+        # Anyone but the test runner, so the files read as wrongly owned
+        # whatever UID runs the suite.
+        target = os.getuid() + 1
+        monkeypatch.setattr(hooks.load(svc), "AUTHENTIK_UID", target)
+
+        changed = hooks.fire("pre_deploy", svc, proxy_subnet="", run=lambda *a: "")
+
+        assert changed is False
+        assert (appdata / "authentik/blueprints/groups.yaml").read_text() == "version: 1\n"
+        assert sorted(chowned) == [("blueprints", target, target), ("groups.yaml", target, target)]
+
+    def test_removes_blueprints_deleted_from_the_repo(
+        self, tmp_path: Path, appdata: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("os.chown", lambda *a: None)
+        stale = appdata / "authentik/blueprints/old.yaml"
+        stale.parent.mkdir(parents=True)
+        stale.write_text("version: 1\n")
+
+        hooks.fire("pre_deploy", self.hook(tmp_path), proxy_subnet="", run=lambda *a: "")
+
+        assert not stale.exists()

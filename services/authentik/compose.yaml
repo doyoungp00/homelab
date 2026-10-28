@@ -27,6 +27,7 @@ services:
     #   - 9000:9000
     restart: unless-stopped
     shm_size: 512mb
+    user: "568:568"
     volumes:
       - ${MNT_APPDATA:?MNT_APPDATA not set}/authentik/data:/data
     labels:
@@ -88,6 +89,7 @@ services:
       - authentik
     restart: unless-stopped
     shm_size: 512mb
+    user: "568:568"
     volumes:
       - ${MNT_APPDATA:?MNT_APPDATA not set}/authentik/data:/data
       # Copied from ./blueprints by hooks.py; see there for why not mounted directly.
