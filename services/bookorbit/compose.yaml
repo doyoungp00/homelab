@@ -24,6 +24,10 @@ services:
       # Keep the library folder picker inside the books mount
       LIBRARY_BROWSE_ROOT: /books
       NODE_ENV: production
+      # Lets BookOrbit use Authentik as an OIDC issuer when auth.${DOMAIN_PUBLIC}
+      # resolves to a LAN address (AdGuard rewrite); in production it refuses
+      # private issuers otherwise.
+      OIDC_ALLOW_LOCAL_ISSUERS: "true"
       POSTGRES_DB: bookorbit
       POSTGRES_HOST: postgres
       POSTGRES_PASSWORD: ${BOOKORBIT_DB_PASSWORD:?BOOKORBIT_DB_PASSWORD not set}
