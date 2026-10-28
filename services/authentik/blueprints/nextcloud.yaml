@@ -3,9 +3,10 @@
 # nextcloud-aio README. The client id and secret come from secret.sops.env so
 # both sides share one value.
 #
-# user_oidc matches existing accounts by user ID, taken from
-# preferred_username with --unique-uid=0, so a person's Authentik username
-# must equal their Nextcloud user ID.
+# user_oidc matches existing accounts by user ID, read from the nextcloud_uid
+# claim below with --unique-uid=0. That's the user's `nextcloud_uid` attribute
+# when set, for people whose Nextcloud ID differs from their Authentik
+# username (Nextcloud IDs can't be renamed), and their username otherwise.
 version: 1
 metadata:
   name: homelab - nextcloud
@@ -15,6 +16,16 @@ entries:
       identifiers:
         path: homelab/groups.yaml
       required: true
+
+  - model: authentik_providers_oauth2.scopemapping
+    id: nextcloud_uid
+    identifiers:
+      name: "homelab: Nextcloud user ID"
+    attrs:
+      scope_name: nextcloud
+      description: Nextcloud user ID
+      expression: |
+        return {"nextcloud_uid": request.user.attributes.get("nextcloud_uid", request.user.username)}
 
   - model: authentik_providers_oauth2.oauth2provider
     id: provider
@@ -42,6 +53,9 @@ entries:
         - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
         - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
         - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
+        - !KeyOf nextcloud_uid
+      # user_oidc reads the uid from the ID token.
+      include_claims_in_id_token: true
 
   - model: authentik_core.application
     id: application
