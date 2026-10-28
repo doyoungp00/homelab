@@ -8,6 +8,23 @@ services:
       - path: ../shared/env/base.env
     environment:
       DOMAIN: https://vaultwarden.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}
+      # SSO through Authentik (authentik/blueprints/vaultwarden.yaml). The id
+      # and secret must match the copies in authentik's secret.sops.env. SSO
+      # replaces only the login step; the master password still unlocks the
+      # vault.
+      SSO_ENABLED: "true"
+      # Password login stays available as a way back in if Authentik is down.
+      SSO_ONLY: "false"
+      # The trailing slash matters: it has to equal Authentik's issuer exactly.
+      SSO_AUTHORITY: https://auth.${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set}/application/o/vaultwarden/
+      SSO_CLIENT_ID: ${VAULTWARDEN_OIDC_CLIENT_ID:?VAULTWARDEN_OIDC_CLIENT_ID not set}
+      SSO_CLIENT_SECRET: ${VAULTWARDEN_OIDC_CLIENT_SECRET:?VAULTWARDEN_OIDC_CLIENT_SECRET not set}
+      # Links a first SSO login to the existing account with the same email.
+      SSO_SIGNUPS_MATCH_EMAIL: "true"
+      # Authentik only for logging in; Vaultwarden keeps its own session
+      # lifetime. Authentik's 5-minute access tokens otherwise clash with the
+      # clients' own expiry checks.
+      SSO_AUTH_ONLY_NOT_SESSION: "true"
     healthcheck:
       interval: 30s
       retries: 3
