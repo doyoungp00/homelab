@@ -69,6 +69,33 @@ The conventional method of searching for media, downloading it, renaming each fi
 
 8. If the VPN connection drops, containers behind Gluetun lose internet access entirely rather than falling back to the home IP. This is intended, as it prevents leaks.
 
-9. Every web UI here except Seerr and Suwayomi is behind the Authentik login wall (see the Authentik README), which only admits the `admins` group. Sonarr, Radarr, and Prowlarr are set to `External` authentication through `*__AUTH__METHOD`, so they don't ask for a second login; their APIs still require their keys. Bazarr's authentication is set to none, and qBittorrent bypasses its login for the `proxy` subnet. Cleanuparr logs in through OIDC against the `cleanuparr` application in Authentik, linked to the admin account. All three are settings in their own config, not in this repo. Anything on the `proxy` network can therefore reach these UIs directly without logging in.
+9. Every web UI here except Seerr and Suwayomi is behind the Authentik login wall (see the Authentik README), which only admits the `admins` group. Sonarr, Radarr, and Prowlarr are set to `External` authentication through `*__AUTH__METHOD`, so they don't ask for a second login; their APIs still require their keys. Bazarr's authentication is set to none, and qBittorrent bypasses its login for the `proxy` subnet. Cleanuparr logs in through OIDC against the `cleanuparr` application in Authentik, linked to the admin account (see "Setting up OIDC" below). All three are settings in their own config, not in this repo. Anything on the `proxy` network can therefore reach these UIs directly without logging in.
 
 10. Seerr is left out because its users log in with their Jellyfin accounts. Suwayomi is left out because manga apps connect to it directly and can't follow a login redirect, so it keeps its own login.
+
+# Setting up OIDC
+
+Cleanuparr is the only app here with its own OIDC login. Authentik's side (provider, redirect URI, `admins`-only access) is created by `authentik/blueprints/cleanuparr.yaml`. Cleanuparr's side is stored in its own database and has to be entered by hand once, on a fresh install or after its config is lost.
+
+1. Add `CLEANUPARR_OIDC_CLIENT_ID` and `CLEANUPARR_OIDC_CLIENT_SECRET` to `authentik/secret.sops.env` (e.g. `openssl rand -hex 20` and `openssl rand -hex 48`), deploy, and check that **Customization → Blueprints** in Authentik shows `homelab - cleanuparr` as successful.
+
+2. In Cleanuparr, open the **OIDC / SSO** section of its settings and set:
+
+   | Field          | Value                                                                                                                      |
+   | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+   | Enable OIDC    | On                                                                                                                         |
+   | Provider Name  | `Authentik` (the login button's label)                                                                                     |
+   | Issuer URL     | `https://auth.${DOMAIN_PUBLIC}/application/o/cleanuparr/`. Keep the trailing slash.                                        |
+   | Client ID      | `CLEANUPARR_OIDC_CLIENT_ID`                                                                                                |
+   | Client Secret  | `CLEANUPARR_OIDC_CLIENT_SECRET`                                                                                            |
+   | Scopes         | `openid profile email`                                                                                                     |
+   | Redirect URL   | `https://cleanuparr.${DOMAIN_LOCAL}`. Cleanuparr appends `/api/auth/oidc/callback`, which is the URI the blueprint allows. |
+   | Exclusive Mode | Off until the OIDC login is proven. It disables the username/password login.                                               |
+
+   Then **Save OIDC Settings**.
+
+3. Click **Link Account** and log in as the admin's Authentik user. Until an account is linked, any Authentik user allowed into the app can sign in.
+
+4. Test **Sign in with Authentik** in a private window. Behind the login wall there's already an Authentik session, so it should go straight through.
+
+If Authentik shows a redirect URI error, decode the `redirect_uri=` parameter in the address bar and compare it with the blueprint's `redirect_uris`.
