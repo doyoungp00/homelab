@@ -17,3 +17,5 @@ Immich is a self-hosted photo and video library, similar to Google Photos.
 2. The Postgres and Valkey images are pinned by digest, as in Immich's official compose file. Update them only when Immich's release notes say to.
 
 3. The `-openvino` ML image only works on Intel hardware. Use a different tag (or none) on other hardware.
+
+4. Login is through OIDC against the `immich` application in Authentik (`authentik/blueprints/immich.yaml`), open to the `admins` and `family` groups. Immich's side of it is in its own admin settings, not this repo. A first OAuth login links to the existing account with the same email, so a person's Authentik email must match their Immich one, or they get a new, empty account. Immich isn't behind the login wall: the mobile apps and shared links need to reach it directly.
