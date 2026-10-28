@@ -15,7 +15,11 @@ services:
       - WG_HOST=${WG_HOST:?WG_HOST not set}
       - PORT=51821
       - WG_PORT=51820
-      - INSECURE=true
+      # Browsers reach it over https through Traefik. This sets both the OAuth
+      # callback's scheme and the session cookie's Secure flag, so `true` would
+      # send Authentik an http:// redirect URI it doesn't allow. Homepage's
+      # widget uses Basic auth over plain http, which isn't affected.
+      - INSECURE=false
       - INIT_ENABLED=true
       - INIT_USERNAME=${INIT_USERNAME:?INIT_USERNAME not set}
       - INIT_PASSWORD=${INIT_PASSWORD:?INIT_PASSWORD not set}
