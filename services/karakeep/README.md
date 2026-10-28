@@ -17,3 +17,9 @@ Karakeep is a bookmarking app for links, notes, and images, with full-text searc
 2. Meilisearch is pinned to a specific version. Upgrading it across versions may require a dump and re-import of the index.
 
 3. The headless Chrome container (port 9222) has no authentication and is reachable by any container on the `proxy` network.
+
+4. Login is through OIDC against the `karakeep` application in Authentik (`authentik/blueprints/karakeep.yaml`), open to the `admins` and `family` groups. Unlike most apps, both sides are in this repo: Karakeep reads its OIDC settings from `OAUTH_*` variables. `KARAKEEP_OIDC_CLIENT_ID` and `KARAKEEP_OIDC_CLIENT_SECRET` have to be set to the same values in both `karakeep/secret.sops.env` and `authentik/secret.sops.env`.
+
+5. `OAUTH_ALLOW_DANGEROUS_EMAIL_ACCOUNT_LINKING` links a first OAuth login to the existing account with the same email. Without it, Authentik's `email_verified: false` makes Karakeep create a new, empty account instead, so a person's Authentik email must match their Karakeep one. The callback Authentik allows is `https://karakeep.${DOMAIN_LOCAL}/api/auth/callback/custom`, which Karakeep builds from `NEXTAUTH_URL`; if that changes, the blueprint's redirect URI must change with it.
+
+6. Karakeep isn't behind the login wall: the browser extension and mobile apps call its API directly with API keys. Password login and signups stay enabled until everyone has linked; after that, `DISABLE_PASSWORD_AUTH=true` leaves OAuth as the only way in.

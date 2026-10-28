@@ -46,6 +46,16 @@ services:
       - CRAWLER_STORE_PDF=true
       - CRAWLER_FULL_PAGE_ARCHIVE=true
       - CRAWLER_VIDEO_DOWNLOAD=true
+      # Login through Authentik (authentik/blueprints/karakeep.yaml). The id
+      # and secret must match the copies in authentik's secret.sops.env.
+      - OAUTH_WELLKNOWN_URL=https://auth.${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set}/application/o/karakeep/.well-known/openid-configuration
+      - OAUTH_CLIENT_ID=${KARAKEEP_OIDC_CLIENT_ID:?KARAKEEP_OIDC_CLIENT_ID not set}
+      - OAUTH_CLIENT_SECRET=${KARAKEEP_OIDC_CLIENT_SECRET:?KARAKEEP_OIDC_CLIENT_SECRET not set}
+      - OAUTH_PROVIDER_NAME=Authentik
+      # Links a first OAuth login to the existing account with the same email.
+      # Needed because authentik reports email_verified as false; safe because
+      # authentik is the only provider and its users are created by an admin.
+      - OAUTH_ALLOW_DANGEROUS_EMAIL_ACCOUNT_LINKING=true
     image: ghcr.io/karakeep-app/karakeep:release
     networks:
       - proxy
