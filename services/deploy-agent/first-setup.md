@@ -131,7 +131,7 @@ running on the old code.
 
 Most logins go through Authentik: a login wall in front of the admin tools, OIDC for apps with their own accounts, and LDAP for Jellyfin. The repo rebuilds Authentik's structure (groups, providers, applications, the LDAP flow) from `services/authentik/blueprints/`, and the client IDs and secrets in sops are reused, so both sides of every login still match. What isn't in the repo depends on whether appdata comes back.
 
-Either way, `auth.${DOMAIN_PUBLIC}` must resolve before any login works: publicly (ddclient), and from inside the LAN and from containers (hairpin NAT or an AdGuard rewrite). Until Authentik is up, every route behind the login wall, this agent's own page included, returns an error instead of a login page. That's expected, and the agent keeps polling and deploying regardless.
+Either way, `auth.${DOMAIN_PUBLIC}` must resolve before any login works: publicly (cloudflare-ddns), and from inside the LAN and from containers (hairpin NAT or an AdGuard rewrite). Until Authentik is up, every route behind the login wall, this agent's own page included, returns an error instead of a login page. That's expected, and the agent keeps polling and deploying regardless.
 
 ## Restoring appdata from a backup
 

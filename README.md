@@ -12,10 +12,10 @@ Docker Compose services for a self-hosted homelab running on TrueNAS SCALE. Ever
 | [BookOrbit](services/bookorbit/README.md)                                              | Ebook and audiobook library with reading progress                        |
 | [Chrony](services/chrony/README.md)                                                    | Local NTP server for devices without internet access                     |
 | [Cleanuparr](services/arr-stack/README.md)                                             | Advanced download management for the Servarr ecosystem                   |
+| [Cloudflare DDNS](services/cloudflare-ddns/README.md)                                  | Keeps public DNS records pointed at the public IP                        |
 | [code-server](services/code-server/README.md)                                          | VS Code in the browser, with the tools to work on this repo              |
 | [CrowdSec](services/crowdsec/README.md)                                                | Intrusion detection and WAF for Traefik                                  |
 | [Dawarich](services/dawarich/README.md)                                                | Location history tracker                                                 |
-| [ddclient](services/ddclient/README.md)                                                | Keeps DNS records pointed at the public IP                               |
 | [Deploy Agent](services/deploy-agent/README.md)                                        | Deploys changes pushed to this repo                                      |
 | [Dockhand](services/dockhand/README.md)                                                | Docker container and stack management UI                                 |
 | [Dozzle](services/dozzle/README.md)                                                    | Real-time container logs                                                 |

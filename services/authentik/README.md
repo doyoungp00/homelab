@@ -12,7 +12,7 @@ Authentik is an identity provider: one account per person, used to log in to eve
 
 # Notes
 
-1. It's served on both `auth.${DOMAIN_LOCAL}` and `auth.${DOMAIN_PUBLIC}`, since OIDC logins redirect the browser to it and some of its apps are public. The public hostname needs a DNS record, which ddclient's config (kept outside this repo) has to include.
+1. It's served on both `auth.${DOMAIN_LOCAL}` and `auth.${DOMAIN_PUBLIC}`, since OIDC logins redirect the browser to it and some of its apps are public. The public hostname needs a DNS record, which comes from the `DOMAINS` list in cloudflare-ddns's `compose.yaml`.
 
 2. The server and worker run as `568:568`, like the rest of the stack, instead of the image's default UID `1000`. `${MNT_APPDATA}/authentik/data` must be owned by `568` before the first deploy: Docker creates a missing bind mount source as `root`, and uploads (icons, branding) then fail. `hooks.py` hands `blueprints/` to `568` on every deploy, since files deploy-agent writes are otherwise root-only. Postgres runs as its own image's user and manages `postgres/` itself.
 

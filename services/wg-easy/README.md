@@ -12,7 +12,7 @@ wg-easy is a WireGuard VPN server with a web UI for managing clients.
 
 # Notes
 
-1. UDP port `51820` must be forwarded on the router, and `WG_HOST` must point at the public IP (kept up to date by ddclient).
+1. UDP port `51820` must be forwarded on the router, and `WG_HOST` must point at the public IP (kept up to date by cloudflare-ddns).
 
 2. wg-easy must stay on a single network. Its masquerade rule is pinned to `eth0`, and with a second network Docker may put the default route on the other interface, silently breaking client traffic.
 

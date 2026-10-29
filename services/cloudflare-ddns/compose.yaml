@@ -1,0 +1,55 @@
+---
+services:
+  cloudflare-ddns:
+    # No Linux capabilities, a read-only filesystem, and no privilege
+    # escalation: it only makes outbound HTTPS calls to Cloudflare.
+    cap_drop: [all]
+    container_name: cloudflare-ddns
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      # Zone - DNS - Edit, scoped to ${DOMAIN_PUBLIC}'s zone.
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:?CLOUDFLARE_API_TOKEN not set}
+      # Every public hostname. nas. is the WireGuard endpoint (wg-easy's
+      # WG_HOST), the rest are routed by Traefik on ${DOMAIN_PUBLIC}.
+      - DOMAINS=nas.${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set},auth.${DOMAIN_PUBLIC},cloud.${DOMAIN_PUBLIC},jellyfin.${DOMAIN_PUBLIC},navidrome.${DOMAIN_PUBLIC},ntfy.${DOMAIN_PUBLIC}
+      # DNS only, never through Cloudflare's proxy: WireGuard is UDP, which
+      # the proxy doesn't carry; CrowdSec would see (and ban) Cloudflare's IPs
+      # instead of clients' unless Traefik trusts them; and the proxy caps
+      # uploads at 100 MB. Only applies to records this creates; existing
+      # records keep whatever proxy status they have in Cloudflare.
+      - PROXIED=false
+      # IPv4 only: nothing here listens on IPv6 (wg-easy has DISABLE_IPV6),
+      # and an AAAA record would send v6 clients to a dead address. Existing
+      # AAAA records are left as they are.
+      - IP6_PROVIDER=none
+    # "1" follows stable releases within major version 1, so a breaking
+    # major release isn't picked up automatically.
+    image: favonia/cloudflare-ddns:1
+    read_only: true
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    user: "568:568"
+    labels:
+      # Homepage
+      - homepage.group=Infra
+      - homepage.name=Cloudflare DDNS
+      - homepage.icon=cloudflare.png
+      - homepage.description=Keeps public DNS records pointed at the home IP
+      # Gatus
+      # The image is FROM scratch with no health command, and its push
+      # monitoring (Healthchecks, Uptime Kuma) doesn't match Gatus's external
+      # endpoints. So this checks the result instead: the WireGuard endpoint's
+      # record, asked of a public resolver. That catches a missing record, not
+      # one pointing at an old IP.
+      - gatus.enable=true
+      - gatus.name=Public DNS (nas)
+      - gatus.group=Infra
+      - "gatus.url=1.1.1.1"
+      - "gatus.dns.query-name=nas.${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set}"
+      - gatus.dns.query-type=A
+      - gatus.interval=10m
+      - 'gatus.conditions=["[DNS_RCODE] == NOERROR", "[BODY] == pat(*.*.*.*)"]'
+      - gatus.alert=true
