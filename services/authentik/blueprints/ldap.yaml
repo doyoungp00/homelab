@@ -93,9 +93,11 @@ entries:
       bind_mode: cached
       search_mode: cached
       mfa_support: false
-    # Without this the service account would only see itself.
+    # Without this the service account would only see itself. Scoped to this
+    # provider. Needs the app label, despite the schema listing the bare
+    # codename: authentik's assign_perm rejects a bare one.
     permissions:
-      - permission: search_full_directory
+      - permission: authentik_providers_ldap.search_full_directory
         user: !KeyOf search_user
 
   - model: authentik_core.application
