@@ -13,8 +13,18 @@ services:
       # Label this Dozzle instance (shown in the header and multi-host menu). See https://dozzle.dev/guide/hostname
       # - DOZZLE_HOSTNAME=my-server
       #
-      # Uncomment to enable authentication. See https://dozzle.dev/guide/authentication
-      # - DOZZLE_AUTH_PROVIDER=simple
+      # Login through Authentik (authentik/blueprints/dozzle.yaml), with
+      # permissions read from the dozzle_roles claim. See https://dozzle.dev/guide/authentication/oidc
+      # The id and secret must match the copies in authentik's secret.sops.env.
+      - DOZZLE_AUTH_PROVIDER=oidc
+      # Trailing slash included: Dozzle refuses a discovery document whose
+      # issuer differs from this.
+      - DOZZLE_AUTH_OIDC_ISSUER=https://auth.${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set}/application/o/dozzle/
+      - DOZZLE_AUTH_OIDC_CLIENT_ID=${DOZZLE_OIDC_CLIENT_ID:?DOZZLE_OIDC_CLIENT_ID not set}
+      - DOZZLE_AUTH_OIDC_CLIENT_SECRET=${DOZZLE_OIDC_CLIENT_SECRET:?DOZZLE_OIDC_CLIENT_SECRET not set}
+      - DOZZLE_AUTH_OIDC_NAME=Authentik
+      # Releases the dozzle_roles claim.
+      - DOZZLE_AUTH_OIDC_SCOPES=dozzle
       #
       # Only show containers matching a filter. See https://dozzle.dev/guide/filters
       # - DOZZLE_FILTER=label=com.example.app
@@ -45,6 +55,7 @@ services:
       - traefik.http.routers.dozzle.rule=Host(`dozzle.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.dozzle.tls=true
       - traefik.http.routers.dozzle.tls.certresolver=cloudflare
+      - traefik.http.routers.dozzle.middlewares=authentik@docker
       - traefik.http.services.dozzle.loadbalancer.server.port=8080
       # Homepage
       - homepage.group=Infra
