@@ -59,6 +59,9 @@ services:
       # Needed because authentik reports email_verified as false; safe because
       # authentik is the only provider and its users are created by an admin.
       - OAUTH_ALLOW_DANGEROUS_EMAIL_ACCOUNT_LINKING=true
+      # Authentik is the only way in: no password form and no local sign-up.
+      # New people sign up through Authentik on their first login.
+      - DISABLE_PASSWORD_AUTH=true
     image: ghcr.io/karakeep-app/karakeep:release
     networks:
       - proxy

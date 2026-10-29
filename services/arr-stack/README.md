@@ -81,16 +81,16 @@ Cleanuparr is the only app here with its own OIDC login. Authentik's side (provi
 
 2. In Cleanuparr, open the **OIDC / SSO** section of its settings and set:
 
-   | Field          | Value                                                                                                                      |
-   | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
-   | Enable OIDC    | On                                                                                                                         |
-   | Provider Name  | `Authentik` (the login button's label)                                                                                     |
-   | Issuer URL     | `https://auth.${DOMAIN_PUBLIC}/application/o/cleanuparr/`. Keep the trailing slash.                                        |
-   | Client ID      | `CLEANUPARR_OIDC_CLIENT_ID`                                                                                                |
-   | Client Secret  | `CLEANUPARR_OIDC_CLIENT_SECRET`                                                                                            |
-   | Scopes         | `openid profile email`                                                                                                     |
-   | Redirect URL   | `https://cleanuparr.${DOMAIN_LOCAL}`. Cleanuparr appends `/api/auth/oidc/callback`, which is the URI the blueprint allows. |
-   | Exclusive Mode | Off until the OIDC login is proven. It disables the username/password login.                                               |
+   | Field          | Value                                                                                                                                                                   |
+   | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | Enable OIDC    | On                                                                                                                                                                      |
+   | Provider Name  | `Authentik` (the login button's label)                                                                                                                                  |
+   | Issuer URL     | `https://auth.${DOMAIN_PUBLIC}/application/o/cleanuparr/`. Keep the trailing slash.                                                                                     |
+   | Client ID      | `CLEANUPARR_OIDC_CLIENT_ID`                                                                                                                                             |
+   | Client Secret  | `CLEANUPARR_OIDC_CLIENT_SECRET`                                                                                                                                         |
+   | Scopes         | `openid profile email`                                                                                                                                                  |
+   | Redirect URL   | `https://cleanuparr.${DOMAIN_LOCAL}`. Cleanuparr appends `/api/auth/oidc/callback`, which is the URI the blueprint allows.                                              |
+   | Exclusive Mode | Off until the OIDC login is proven, then on. It disables the username/password login; Cleanuparr is behind the login wall, so an Authentik outage blocks it either way. |
 
    Then **Save OIDC Settings**.
 

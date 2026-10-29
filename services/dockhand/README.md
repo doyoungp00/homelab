@@ -10,7 +10,7 @@ It gives an overview of every container on the host in one place, and shows when
 
 # Notes
 
-1. Dockhand has read-write access to the Docker socket, which is effectively root on the host. It sits behind the Authentik login wall, and its own login uses OIDC against the `dockhand` application in Authentik (`authentik/blueprints/dockhand.yaml`), which only the `admins` group can use. The OIDC settings on Dockhand's side live in its database, not this repo; see "Setting up OIDC" below. Keep the local admin account as a way back in if Authentik is down.
+1. Dockhand has read-write access to the Docker socket, which is effectively root on the host. It sits behind the Authentik login wall, and its own login uses OIDC against the `dockhand` application in Authentik (`authentik/blueprints/dockhand.yaml`), which only the `admins` group can use. The OIDC settings on Dockhand's side live in its database, not this repo; see "Setting up OIDC" below. Password login is off (`DISABLE_LOCAL_LOGIN=true`), so OIDC is the only way in. If Authentik is down, remove that line and redeploy, or run `docker exec -it dockhand /app/scripts/emergency/sqlite/disable-auth.sh`, which turns Dockhand's authentication off until it's re-enabled in its settings.
 
 2. Deployments are owned by Deploy Agent and this repo. Changes made to a stack through Dockhand will be reverted the next time that service is deployed. Make permanent changes in the repo instead.
 
@@ -37,4 +37,4 @@ Authentik's side (provider, redirect URI, `admins`-only access) is created by `a
 
 3. Test the OIDC login in a private window. If the account it signs in to isn't an admin, grant it admin from the local admin account.
 
-4. Keep the local admin account and password login (don't set `DISABLE_LOCAL_LOGIN`) as a way back in if Authentik is down.
+4. Once the OIDC login works, `DISABLE_LOCAL_LOGIN=true` in `compose.yaml` turns password login off (see note 1 for getting back in).

@@ -45,7 +45,7 @@ Authentik's side (provider, redirect URIs, who may log in) is created by `authen
    | Auto Launch                  | Off until password login is disabled                                         |
    | Mobile Redirect URI Override | Off. Authentik accepts `app.immich:///oauth-callback` as is.                 |
 
-   Leave **Password Login** on as a way back in if Authentik is down.
+   Leave **Password Login** on until everyone has linked, then turn it off. If Authentik is down after that, `docker exec immich_server immich-admin enable-password-login` turns it back on.
 
 4. Test in a private window with **Login with OAuth**. An existing user should land in their own library. An empty library means the email didn't match and a new account was created with the Authentik email instead. As an admin, delete that new account under **Administration → Users**, change the original account's email to the Authentik one, and log in again; it then links to the original.
 

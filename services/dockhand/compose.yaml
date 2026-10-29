@@ -6,6 +6,11 @@ services:
       - path: .env
         required: false
       - path: ../shared/env/base.env
+    environment:
+      # Authentik (OIDC) is the only way in. Locked out while Authentik is
+      # down: remove this and redeploy, or run Dockhand's emergency script
+      # (see the README).
+      - DISABLE_LOCAL_LOGIN=true
     image: fnsys/dockhand:latest
     networks:
       - proxy
