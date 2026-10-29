@@ -18,7 +18,7 @@ Jellyfin is a media server for streaming movies and TV shows.
 
 3. Jellyfin is exposed publicly, so it's covered by CrowdSec. Use strong passwords for every user.
 
-4. Logins go through Authentik over LDAP (the `authentik-ldap` outpost; see `authentik/blueprints/ldap.yaml`), so every client keeps its own login screen. The password is an Authentik **app password**, not the person's main one: LDAP can't ask for MFA, so the LDAP bind flow accepts app passwords only. Each person creates one under **Settings → Tokens and App passwords** in Authentik (untick Expiring) and uses it in every Jellyfin app, and in Seerr, which signs in through Jellyfin. Quick Connect saves typing it on TVs. The plugin settings live in Jellyfin's config, not this repo; see "Setting up LDAP" below.
+4. Logins go through Authentik over LDAP (the `authentik-ldap` outpost; see `authentik/blueprints/ldap.yaml`), so every client keeps its own login screen. The password is an Authentik **app password**, not the person's main one: LDAP can't ask for MFA, so the LDAP bind flow accepts app passwords only. Each person gets one from Authentik (see note 10 in the Authentik README) and uses it in every Jellyfin app, and in Seerr, which signs in through Jellyfin. Quick Connect saves typing it on TVs. The plugin settings live in Jellyfin's config, not this repo; see "Setting up LDAP" below.
 
 # Setting up LDAP
 
@@ -47,7 +47,7 @@ Authentik's side (the LDAP flow, the `ldap-search` account, the outpost) is crea
 
    Use **Save and Test LDAP Server Settings** and **Test LDAP Filters**: the filter test should list the people in `admins` and `family`.
 
-4. For each existing user, **Dashboard → Users → (user) → Authentication Provider**, choose the LDAP provider. Usernames match Authentik's, so their history and settings stay. Leave the local admin from step 1 on Default.
+4. For each existing user, **Dashboard → Users → (user) → Authentication Provider**, choose the LDAP provider and save. Usernames match Authentik's, so their history and settings stay. Until this is done, the plugin ignores that user: their old Jellyfin password keeps working and the app password doesn't. Leave the local admin from step 1 on Default.
 
 5. **Dashboard → General → Quick Connect**, enable it. A TV then shows a code to approve from a phone that's already logged in.
 
