@@ -40,6 +40,12 @@ services:
       - traefik.http.routers.frigate.tls=true
       - traefik.http.routers.frigate.tls.certresolver=cloudflare
       - traefik.http.routers.frigate.service=frigate
+      # Single sign-on: the login wall, then Traefik adds X-Proxy-Secret so
+      # Frigate (auth disabled, proxy.auth_secret set) only trusts Authentik's
+      # user and group headers when they came through Traefik. Without the
+      # secret, anything on `proxy` could send those headers itself.
+      - traefik.http.routers.frigate.middlewares=authentik@docker,frigate-proxy-secret@docker
+      - "traefik.http.middlewares.frigate-proxy-secret.headers.customrequestheaders.X-Proxy-Secret=${FRIGATE_PROXY_SECRET:?FRIGATE_PROXY_SECRET not set}"
       - traefik.http.services.frigate.loadbalancer.server.port=8971
       # Debug MJPEG endpoint (port 5000, unauthenticated)
       # Gives it a real TLS'd hostname instead of a raw host IP:port, which
@@ -50,6 +56,10 @@ services:
       - traefik.http.routers.frigate-stream.tls=true
       - traefik.http.routers.frigate-stream.tls.certresolver=cloudflare
       - traefik.http.routers.frigate-stream.service=frigate-stream
+      # Port 5000 is the whole unauthenticated UI and API, not just the stream.
+      # Homepage's camera card loads it in the browser, which already has the
+      # Authentik session from the dashboard, so the wall costs nothing there.
+      - traefik.http.routers.frigate-stream.middlewares=authentik@docker
       - traefik.http.services.frigate-stream.loadbalancer.server.port=5000
       # Homepage
       - homepage.group=Surveillance
@@ -58,16 +68,15 @@ services:
       - "homepage.href=https://frigate.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
       - homepage.description=Home surveillance
       - homepage.widget.type=frigate
-      # Internal, so the widget keeps working once the router is behind the
-      # Authentik login wall. Homepage fetches it server-side.
-      - "homepage.widget.url=http://frigate:8971"
-      - homepage.widget.username=${FRIGATE_USER:?FRIGATE_USER not set}
-      - homepage.widget.password=${FRIGATE_PASS:?FRIGATE_PASS not set}
+      # Internal and unauthenticated: Homepage fetches it server-side, so it
+      # skips the login wall, and 8971 only answers requests carrying
+      # Traefik's proxy secret.
+      - "homepage.widget.url=http://frigate:5000"
       # Gatus
       - gatus.enable=true
       - gatus.name=Frigate NVR
       - gatus.group=Infra
-      - "gatus.url=http://frigate:8971"
+      - "gatus.url=http://frigate:5000"
       - gatus.interval=5m
       - 'gatus.conditions=["[STATUS] == 200", "[RESPONSE_TIME] < 1000"]'
       - gatus.alert=true

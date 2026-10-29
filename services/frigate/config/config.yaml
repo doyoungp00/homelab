@@ -3,13 +3,23 @@
 # when that file does not yet exist (see hooks.py). After the first deploy
 # Frigate and its UI own this file; edits here will NOT be applied, so change
 # the live one instead.
+# Logins come from Authentik through Traefik (see the README): Frigate's own
+# login is off, and it trusts the user and group headers only alongside
+# Traefik's X-Proxy-Secret.
 auth:
-  failed_login_rate_limit: 1/second;5/minute;20/hour
-  # Must match PROXY_SUBNET in scripts/deploy.py, which is why that network is
-  # pinned. Without it Frigate sees Traefik's container IP as the client and
-  # rate-limits every user as if they were one attacker.
-  trusted_proxies:
-    - 172.16.25.0/24
+  enabled: false
+
+proxy:
+  # Substituted from the container's environment (secret.sops.env).
+  auth_secret: "{FRIGATE_PROXY_SECRET}"
+  separator: "|"
+  header_map:
+    user: x-authentik-username
+    role: x-authentik-groups
+    role_map:
+      admin:
+        - admins
+  default_role: viewer
 
 # Traefik terminates TLS; enabling it here breaks the route.
 tls:
