@@ -141,3 +141,7 @@ entries:
       type: ldap
       providers:
         - !KeyOf provider
+      # Required by the serializer; every other field has a default. The
+      # container reads its own AUTHENTIK_HOST, so this only mirrors it.
+      config:
+        authentik_host: http://authentik-server:9000
