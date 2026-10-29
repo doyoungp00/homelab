@@ -108,6 +108,38 @@ services:
       # Copied from ./blueprints by hooks.py; see there for why not mounted directly.
       - ${MNT_APPDATA:?MNT_APPDATA not set}/authentik/blueprints:/blueprints/homelab:ro
 
+  # LDAP outpost for blueprints/ldap.yaml: answers LDAP binds and searches on
+  # 3389 by asking the server. On `proxy` for both the server and the apps
+  # that use it (Jellyfin); not published to the host. Plain LDAP, since the
+  # traffic never leaves the Docker bridge.
+  authentik-ldap:
+    container_name: authentik-ldap
+    depends_on:
+      - authentik-server
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      AUTHENTIK_HOST: http://authentik-server:9000
+      # The outpost's own token, from Applications > Outposts > LDAP >
+      # View Deployment Info. A new Authentik database means a new token.
+      AUTHENTIK_TOKEN: ${LDAP_OUTPOST_TOKEN:?LDAP_OUTPOST_TOKEN not set}
+    # Same version as the server: outposts must match it.
+    image: ghcr.io/goauthentik/ldap:2026.8.5
+    networks:
+      - proxy
+    restart: unless-stopped
+    user: "568:568"
+    labels:
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Authentik LDAP
+      - gatus.group=Infra
+      - "gatus.url=tcp://authentik-ldap:3389"
+      - gatus.interval=5m
+      - 'gatus.conditions=["[CONNECTED] == true"]'
+
   authentik-db:
     container_name: authentik-db
     env_file:
