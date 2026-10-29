@@ -126,3 +126,31 @@ hashing the resolved compose config, not by checking whether a rebuilt image's d
 changed. Since `compose.yaml` itself rarely changes between `agent.py` edits, `--build` alone can
 produce a new image that `up` then leaves completely unused, silently keeping the old container
 running on the old code.
+
+# 5. Authentik and logins
+
+Most logins go through Authentik: a login wall in front of the admin tools, OIDC for apps with their own accounts, and LDAP for Jellyfin. The repo rebuilds Authentik's structure (groups, providers, applications, the LDAP flow) from `services/authentik/blueprints/`, and the client IDs and secrets in sops are reused, so both sides of every login still match. What isn't in the repo depends on whether appdata comes back.
+
+Either way, `auth.${DOMAIN_PUBLIC}` must resolve before any login works: publicly (ddclient), and from inside the LAN and from containers (hairpin NAT or an AdGuard rewrite). Until Authentik is up, every route behind the login wall, this agent's own page included, returns an error instead of a login page. That's expected, and the agent keeps polling and deploying regardless.
+
+## Restoring appdata from a backup
+
+Authentik's database brings back users, passwords, MFA, app passwords, user attributes, and the LDAP outpost's token, and each app's database brings back its own OIDC settings. Only check that `${MNT_APPDATA}/authentik/data` is still owned by `568` (`sudo chown -R 568:568 /mnt/<pool>/appdata/authentik/data`).
+
+## Starting without appdata
+
+Before the first deploy, create `${MNT_APPDATA}/authentik/data` owned by `568`. Then, after it:
+
+1. Set the `akadmin` password at `https://auth.${DOMAIN_PUBLIC}/if/flow/initial-setup/`, and keep that account as the way back in.
+
+2. Check that **Customization → Blueprints** shows every `homelab - …` blueprint as successful.
+
+3. Recreate each person as in "Adding a person" in the Authentik README: username, email, groups, MFA, and a `nextcloud_uid` attribute where their Nextcloud ID differs from their username.
+
+4. The new LDAP outpost has a new token, so the `LDAP_OUTPOST_TOKEN` in `authentik/secret.sops.env` is stale. Copy the new one from **Applications → Outposts → LDAP → View Deployment Info**, push it, and let the agent redeploy Authentik. Everyone creates a new Jellyfin app password.
+
+5. In each app that starts empty, create its first admin with a password first; most can't be configured before they have one. That account is also the app's way back in if Authentik is down. Then set up the app's side of OIDC from its README ("Setting up OIDC") for Immich, Cleanuparr (arr-stack README), Dockhand, BookOrbit, and Nextcloud. Karakeep, wg-easy, Dawarich, and Vaultwarden read theirs from `compose.yaml` and need nothing.
+
+## If Authentik is down
+
+Password logins keep working wherever they're still enabled, and `akadmin` is a local account. Pages behind the login wall stay unreachable; to open them in an emergency, revert the `traefik.http.routers.<name>.middlewares=authentik@docker` labels and push, since the agent deploys from git without Authentik.

@@ -29,3 +29,23 @@ Authentik is an identity provider: one account per person, used to log in to eve
 8. Blueprint inputs are passed to the worker as plain environment variables (`DOMAIN_*`, `<APP>_OIDC_CLIENT_ID`, `<APP>_OIDC_CLIENT_SECRET`), each required in `compose.yaml` so a missing secret fails the deploy. Don't prefix them with `AUTHENTIK_`: authentik reads every such variable as its own setting. The app's side of an OIDC login (issuer, client ID and secret) usually lives in the app's own settings and has to be entered there to match.
 
 9. Removing a blueprint from `blueprints/` stops it being applied, but leaves the objects it created. Delete those in the UI.
+
+10. `blueprints/ldap.yaml` serves an LDAP directory for apps that check passwords themselves (Jellyfin), through the `authentik-ldap` outpost container. LDAP can't ask for a second factor, so binds run a separate `ldap-authentication-flow` that accepts **app passwords only**: a person's main password works only on the web, behind MFA. Each person creates an app password under **Settings → Tokens and App passwords** (untick Expiring) and uses it as their password in those apps. Apps bind as the `ldap-search` service account to look users up; its app password is `LDAP_SEARCH_APP_PASSWORD`. Binds are cached, so a revoked app password can keep working until the outpost's cached session expires.
+
+# Adding a person
+
+1. Check the username is free everywhere it's matched by name. Nextcloud signs a login into any existing user with the same ID (`occ user:list`), and BookOrbit does the same with local linking on.
+
+2. In Authentik, **Directory → Users → Create**: username, name, and an email that's theirs. Several apps link accounts by email, so emails are set by an admin only (**System → Settings**, "Allow users to change email" off). Then **Set password**, or send a recovery link if email is configured.
+
+3. Add them to `family`, or to `admins` for the admin tools behind the login wall. Group bindings in `blueprints/` decide which apps let them in.
+
+4. They log in at `auth.${DOMAIN_PUBLIC}` once and set up MFA.
+
+Accounts are then created on first login in Immich, Karakeep, Dawarich, BookOrbit, Nextcloud, and Vaultwarden. A few things stay per app:
+
+- **Vaultwarden:** they choose a master password on first login. Authentik never sees it.
+- **wg-easy:** admins only, and not created automatically, since every wg-easy user is an administrator. An admin creates the wg-easy user, who then links Authentik from its account page.
+- **Jellyfin, Seerr, Navidrome, Home Assistant, ntfy:** not on Authentik yet. Create those accounts by hand.
+
+For someone who already has accounts from before Authentik, see each app's README: most link by email or username on first login, and some ask for the old password once.

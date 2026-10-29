@@ -1,0 +1,141 @@
+# LDAP directory for apps that check passwords themselves (Jellyfin), served
+# by the authentik-ldap outpost in compose.yaml.
+#
+# LDAP can't ask for a second factor, so binds run their own flow that accepts
+# app passwords only: a user's main password stays usable only on the web,
+# behind MFA. Each person creates an app password (Settings > Tokens and App
+# passwords) and uses it in those apps.
+version: 1
+metadata:
+  name: homelab - ldap
+entries:
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        path: homelab/groups.yaml
+      required: true
+
+  # Bind flow: username, then an app password, then log in. No MFA stage.
+  - model: authentik_stages_password.passwordstage
+    id: password_stage
+    identifiers:
+      name: ldap-authentication-password-stage
+    attrs:
+      backends:
+        - authentik.core.auth.TokenBackend
+
+  - model: authentik_stages_identification.identificationstage
+    id: identification_stage
+    identifiers:
+      name: ldap-identification-stage
+    attrs:
+      user_fields: [username]
+      password_stage: !KeyOf password_stage
+
+  - model: authentik_stages_user_login.userloginstage
+    id: login_stage
+    identifiers:
+      name: ldap-authentication-login-stage
+
+  - model: authentik_flows.flow
+    id: flow
+    identifiers:
+      slug: ldap-authentication-flow
+    attrs:
+      name: LDAP authentication
+      title: LDAP authentication
+      designation: authentication
+
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf flow
+      stage: !KeyOf identification_stage
+    attrs:
+      order: 10
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf flow
+      stage: !KeyOf login_stage
+    attrs:
+      order: 30
+
+  # Service account apps bind as to look users up before checking their
+  # password. It has no password, only an app password from secret.sops.env,
+  # which is what the bind flow accepts anyway.
+  - model: authentik_core.user
+    id: search_user
+    identifiers:
+      username: ldap-search
+    attrs:
+      name: LDAP search
+      type: service_account
+
+  - model: authentik_core.token
+    identifiers:
+      identifier: ldap-search-app-password
+    attrs:
+      intent: app_password
+      user: !KeyOf search_user
+      key: !Env LDAP_SEARCH_APP_PASSWORD
+      expiring: false
+      description: Bind password for apps searching the LDAP directory
+
+  - model: authentik_providers_ldap.ldapprovider
+    id: provider
+    identifiers:
+      name: Provider for LDAP
+    attrs:
+      authorization_flow: !KeyOf flow
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-invalidation-flow]]
+      base_dn: DC=ldap,DC=goauthentik,DC=io
+      # Cached: fewer round trips to the core per login. A changed or revoked
+      # app password can keep working until the cached session expires.
+      bind_mode: cached
+      search_mode: cached
+      mfa_support: false
+    # Without this the service account would only see itself.
+    permissions:
+      - permission: search_full_directory
+        user: !KeyOf search_user
+
+  - model: authentik_core.application
+    id: application
+    identifiers:
+      slug: ldap
+    attrs:
+      name: LDAP
+      provider: !KeyOf provider
+      # Not something to open in a browser.
+      meta_hide: true
+
+  # Binding requires access to the application: everyone, plus the service
+  # account. Bindings are OR'd (policy engine mode "any").
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf application
+      group: !Find [authentik_core.group, [name, admins]]
+    attrs:
+      order: 0
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf application
+      group: !Find [authentik_core.group, [name, family]]
+    attrs:
+      order: 1
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf application
+      user: !KeyOf search_user
+    attrs:
+      order: 2
+
+  # Run by the authentik-ldap container in compose.yaml, which authenticates
+  # with this outpost's token (shown in the UI under Outposts > LDAP >
+  # Deployment info).
+  - model: authentik_outposts.outpost
+    identifiers:
+      name: LDAP
+    attrs:
+      type: ldap
+      providers:
+        - !KeyOf provider
