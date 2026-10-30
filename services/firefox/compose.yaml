@@ -5,6 +5,12 @@ services:
     depends_on:
       firefox-gluetun:
         condition: service_healthy
+    devices:
+      # The N100's iGPU. Selkies detects it (AUTO_GPU) and uses it to render
+      # and to encode the stream over VA-API with zero copy, instead of x264
+      # on the CPU. No group_add as in jellyfin: the LinuxServer init adds its
+      # user to the device's group itself.
+      - /dev/dri:/dev/dri
     env_file:
       - path: .env
         required: false
@@ -58,6 +64,15 @@ services:
       # Its own key, not arr-stack's: see the README.
       - WIREGUARD_PRIVATE_KEY=${GLUETUN_WIREGUARD_PRIVATE_KEY:?GLUETUN_WIREGUARD_PRIVATE_KEY not set}
       - WIREGUARD_ADDRESSES=10.2.0.2/32
+      # HTTP proxy (HTTPS via CONNECT) for any device or app that wants to
+      # browse through this tunnel natively. Login required: the port is
+      # published to the LAN, and anyone who can use it borrows the VPN.
+      - HTTPPROXY=on
+      # - HTTPPROXY_USER=${GLUETUN_HTTPPROXY_USER:?GLUETUN_HTTPPROXY_USER not set}
+      # - HTTPPROXY_PASSWORD=${GLUETUN_HTTPPROXY_PASSWORD:?GLUETUN_HTTPPROXY_PASSWORD not set}
+      # Strip proxy headers (Via, X-Forwarded-For) that would tell sites a
+      # proxy is in use, or leak the client's LAN address.
+      - HTTPPROXY_STEALTH=on
       - UPDATER_PERIOD=24h
     healthcheck:
       interval: 10s
@@ -72,6 +87,10 @@ services:
     image: qmcgaw/gluetun
     networks:
       - proxy
+    ports:
+      # Gluetun's HTTP proxy. Not routable through Traefik: clients speak the
+      # proxy protocol to it directly, so it needs a host port.
+      - "8888:8888/tcp"
     restart: unless-stopped
     volumes:
       - /etc/localtime:/etc/localtime:ro

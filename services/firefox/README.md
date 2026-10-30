@@ -19,3 +19,18 @@ Some sites are blocked or behave differently from the home IP. This browses them
 4. The GUI has no login of its own and includes a terminal with passwordless sudo, so anyone who reaches it gets root in the container. It is only reachable through Traefik behind the Authentik login wall; don't publish its ports.
 
 5. `/config` is Firefox's home directory, so the profile (bookmarks, logins, cookies) persists across container updates.
+
+6. The host's Intel iGPU (`/dev/dri`) renders Firefox and encodes the stream over VA-API, which keeps the N100's CPU free and the stream smoother. Pick H.264 or H.265 in the stream's side panel; leave the colour mode at the default 4:2:0, since "FullColor" (4:4:4) H.264 has no VA-API profile and falls back to CPU encoding. To check it's in use, look for GPU detection in `docker logs firefox` (it also lists the encoders it dropped), or run `vainfo` in the container's terminal.
+
+7. Closing the Firefox window inside the stream leaves a black screen, since the container only runs that one app. Right-click the black area for the desktop menu and relaunch Firefox from it, or run `docker restart firefox`.
+
+# HTTP proxy
+
+`firefox-gluetun` also runs Gluetun's HTTP proxy, for using the tunnel from a browser or app on your own device instead of the streamed Firefox. It handles HTTPS too (via `CONNECT`).
+
+- Address: `${HOST_IP}:8888` from the LAN, or `firefox-gluetun:8888` from containers on `proxy`. From outside, connect through wg-easy first.
+- Login: `GLUETUN_HTTPPROXY_USER` and `GLUETUN_HTTPPROXY_PASSWORD` in this service's `secret.sops.env`. A login is required because the port is published to the LAN, and anyone who can use it borrows the VPN.
+- Stealth mode is on, so the proxy doesn't add headers that tell sites a proxy is in use.
+- Like Firefox, the proxy stops working instead of falling back to the home IP when the VPN drops.
+
+To use it in a desktop browser, set an HTTP proxy of `${HOST_IP}` port `8888` and check "also use this proxy for HTTPS". An extension like FoxyProxy can switch it on for chosen sites only. The browser asks for the login on first use.
