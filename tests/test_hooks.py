@@ -571,6 +571,38 @@ class TestArrStackHook:
         assert len(commands) == 1
 
 
+class TestFirefoxHook:
+    """Same repair as arr-stack's, against its own gluetun. Pointing it at
+    arr-stack's would compare against the wrong id and bounce firefox on
+    every deploy, or never repair it."""
+
+    def test_rejoins_firefox_to_its_own_gluetun(
+        self, tmp_path: Path, appdata: Path
+    ) -> None:
+        service_dir = tmp_path / "firefox"
+        service_dir.mkdir()
+        real = Path(__file__).resolve().parent.parent / "services/firefox/hooks.py"
+        (service_dir / "hooks.py").write_text(real.read_text())
+        commands: list[tuple[str, ...]] = []
+
+        def fake_run(*args: str) -> str:
+            commands.append(args)
+            if args[1] == "ps":
+                name = args[-1].removeprefix("name=^").removesuffix("$")
+                return {"firefox-gluetun": GLUETUN_ID, "firefox": "c" * 64}.get(name, "")
+            if args[1] == "inspect":
+                return f"container:{STALE_ID}"
+            return ""
+
+        changed = hooks.fire(
+            "post_deploy", service_dir, proxy_subnet="10.9.0.0/24", run=fake_run
+        )
+
+        assert changed is True
+        assert commands[0][-1] == "name=^firefox-gluetun$"
+        assert commands[-1][-1] == "firefox"
+
+
 class TestDeployIntegration:
     def run_apply(
         self,

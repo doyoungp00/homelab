@@ -20,6 +20,7 @@ Docker Compose services for a self-hosted homelab running on TrueNAS SCALE. Ever
 | [Dockhand](services/dockhand/README.md)                                                | Docker container and stack management UI                                 |
 | [Dozzle](services/dozzle/README.md)                                                    | Real-time container logs                                                 |
 | [File Browser](services/filebrowser/README.md)                                         | Web-based file manager for the NAS                                       |
+| [Firefox](services/firefox/README.md)                                                  | Web browser tunneled through its own VPN connection                      |
 | [Flaresolverr](services/arr-stack/README.md)                                           | Solves Cloudflare challenges for Prowlarr's indexers                     |
 | [Frigate](services/frigate/README.md)                                                  | NVR with object detection for IP cameras                                 |
 | [Gatus](services/gatus/README.md)                                                      | Health and uptime dashboard                                              |

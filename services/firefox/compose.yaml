@@ -1,0 +1,101 @@
+---
+services:
+  firefox:
+    container_name: firefox
+    depends_on:
+      firefox-gluetun:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      test:
+        - CMD-SHELL
+        - curl -fSs http://127.0.0.1:3000 || exit 1
+      timeout: 10s
+    image: lscr.io/linuxserver/firefox:latest
+    # Routed through firefox-gluetun's VPN tunnel, so every page it loads
+    # leaves from the VPN's IP, and gluetun's firewall drops anything that
+    # would bypass the tunnel. Shares its network namespace entirely, so no
+    # networks:/ports: of its own; its Traefik/Gatus labels live on
+    # firefox-gluetun. hooks.py recreates it if firefox-gluetun is replaced,
+    # see scripts/gluetun.py.
+    network_mode: service:firefox-gluetun
+    restart: unless-stopped
+    # Modern sites (e.g. YouTube) crash tabs with Docker's 64MB default.
+    shm_size: 1gb
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/firefox/config:/config
+    labels:
+      # Homepage reads labels over the Docker API and never connects to the
+      # container, so unlike Traefik's they work here despite network_mode,
+      # and the card's status is firefox's own rather than firefox-gluetun's.
+      - homepage.group=Services
+      - homepage.name=Firefox
+      - homepage.icon=firefox.png
+      - "homepage.href=https://firefox.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Browser tunneled through a VPN
+
+  firefox-gluetun:
+    cap_add:
+      - NET_ADMIN
+    container_name: firefox-gluetun
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      - VPN_SERVICE_PROVIDER=${GLUETUN_VPN_SERVICE_PROVIDER:?GLUETUN_VPN_SERVICE_PROVIDER not set}
+      - VPN_TYPE=wireguard
+      - SERVER_COUNTRIES=${GLUETUN_SERVER_COUNTRIES:?GLUETUN_SERVER_COUNTRIES not set}
+      # Its own key, not arr-stack's: see the README.
+      - WIREGUARD_PRIVATE_KEY=${GLUETUN_WIREGUARD_PRIVATE_KEY:?GLUETUN_WIREGUARD_PRIVATE_KEY not set}
+      - WIREGUARD_ADDRESSES=10.2.0.2/32
+      - UPDATER_PERIOD=24h
+    healthcheck:
+      interval: 10s
+      retries: 10
+      test:
+        - CMD
+        - wget
+        - "-q"
+        - "--spider"
+        - https://1.1.1.1
+      timeout: 5s
+    image: qmcgaw/gluetun
+    networks:
+      - proxy
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/firefox/gluetun:/gluetun
+    labels:
+      # Firefox's Traefik/Gatus - on firefox-gluetun since firefox has no
+      # network identity of its own. Its Homepage labels stay on firefox.
+      # Port 3000 is the plain-HTTP GUI meant to sit behind a proxy; Traefik
+      # supplies the HTTPS the browser needs for audio/video. The GUI has a
+      # terminal with passwordless sudo, so it must stay behind Authentik.
+      - traefik.enable=true
+      - traefik.http.routers.firefox.rule=Host(`firefox.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.firefox.tls=true
+      - traefik.http.routers.firefox.tls.certresolver=cloudflare
+      - traefik.http.routers.firefox.middlewares=authentik@docker
+      - traefik.http.services.firefox.loadbalancer.server.port=3000
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Firefox
+      - gatus.group=Services
+      - "gatus.url=http://firefox-gluetun:3000"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] == 200", "[RESPONSE_TIME] < 1000"]'
+
+networks:
+  proxy:
+    external: true
