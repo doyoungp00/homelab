@@ -38,3 +38,13 @@ Authentik's side (provider, redirect URI, `admins`-only access) is created by `a
 3. Test the OIDC login in a private window. If the account it signs in to isn't an admin, grant it admin from the local admin account.
 
 4. Once the OIDC login works, `DISABLE_LOCAL_LOGIN=true` in `compose.yaml` turns password login off (see note 1 for getting back in).
+
+# Homepage widget
+
+Homepage calls `http://dockhand:3000` directly, so the Authentik wall doesn't apply, but Dockhand's own login does. The widget can't use OIDC, and its username/password login is rejected while `DISABLE_LOCAL_LOGIN=true`, so it uses an API token instead. Tokens are stored in Dockhand's database, so this has to be redone if its data is lost.
+
+1. In Dockhand, sign in and open **Profile → API tokens**. Create a token named `homepage` with no expiry, and copy it (`dh_…`, shown once).
+
+2. Add it as `DOCKHAND_HOMEPAGE_KEY` to `dockhand/secret.sops.env` and deploy.
+
+The token acts as the user who created it, so it has full admin rights. Only Homepage's server side sees it; it isn't sent to the browser.

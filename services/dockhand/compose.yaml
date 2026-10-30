@@ -39,6 +39,9 @@ services:
       - homepage.description=Docker containers overview
       - homepage.widget.type=dockhand
       - "homepage.widget.url=http://dockhand:3000"
+      # An API token, since local login is off and the widget can't use OIDC.
+      # See "Homepage widget" in the README.
+      - homepage.widget.key=${DOCKHAND_HOMEPAGE_KEY:-}
       - 'homepage.widget.fields=["stacks","running","events_today"]'
       # Gatus
       - gatus.enable=true
