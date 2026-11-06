@@ -376,11 +376,6 @@ services:
       # Only pick servers that support NAT-PMP; otherwise port forwarding times
       # out, the up command never runs, and qBittorrent stays bound to lo.
       - PORT_FORWARD_ONLY=on
-      # Random picks also land on servers gluetun's updater added with an
-      # unvetted port-forward flag (e.g. 103.69.224.3 refused NAT-PMP and PF
-      # never retried). Stick to port-forward servers from gluetun's built-in
-      # list; gluetun picks randomly among these. NL#712 is known-good.
-      - SERVER_HOSTNAMES=node-nl-221.protonvpn.net,node-nl-309.protonvpn.net,node-nl-209.protonvpn.net
       - VPN_PORT_FORWARDING_PROVIDER=${GLUETUN_VPN_PORT_FORWARDING_PROVIDER:?GLUETUN_VPN_PORT_FORWARDING_PROVIDER not set}
       - >-
         VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh -c 'wget -O- -nv --retry-connrefused --post-data
