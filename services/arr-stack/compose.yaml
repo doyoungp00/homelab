@@ -386,6 +386,10 @@ services:
         "json={\"listen_port\":0,\"current_network_interface\":\"lo\"}"
         http://127.0.0.1:8080/api/v2/app/setPreferences'
       - UPDATER_PERIOD=24h
+      # ProtonVPN resets DNS-over-TLS (:853) inside the tunnel, so the default
+      # DoT resolver fails, gluetun's internal healthcheck can't resolve its
+      # targets, and the VPN restart-loops. DoH rides :443 and gets through.
+      - DNS_UPSTREAM_RESOLVER_TYPE=doh
     healthcheck:
       interval: 10s
       retries: 10
