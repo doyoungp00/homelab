@@ -73,7 +73,8 @@ services:
       # Strip proxy headers (Via, X-Forwarded-For) that would tell sites a
       # proxy is in use, or leak the client's LAN address.
       - HTTPPROXY_STEALTH=on
-      - UPDATER_PERIOD=24h
+      # Gluetun wiki: no less than 360h, or providers may block the updater.
+      - UPDATER_PERIOD=360h
     healthcheck:
       interval: 10s
       retries: 10
