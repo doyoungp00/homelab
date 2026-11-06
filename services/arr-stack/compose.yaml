@@ -376,6 +376,11 @@ services:
       # Only pick servers that support NAT-PMP; otherwise port forwarding times
       # out, the up command never runs, and qBittorrent stays bound to lo.
       - PORT_FORWARD_ONLY=on
+      # Random picks also land on servers gluetun's updater added with an
+      # unvetted port-forward flag (e.g. 103.69.224.3 refused NAT-PMP and PF
+      # never retried). Stick to port-forward servers from gluetun's built-in
+      # list; gluetun picks randomly among these. NL#712 is known-good.
+      - SERVER_HOSTNAMES=node-nl-221.protonvpn.net,node-nl-309.protonvpn.net,node-nl-209.protonvpn.net
       - VPN_PORT_FORWARDING_PROVIDER=${GLUETUN_VPN_PORT_FORWARDING_PROVIDER:?GLUETUN_VPN_PORT_FORWARDING_PROVIDER not set}
       - >-
         VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh -c 'wget -O- -nv --retry-connrefused --post-data
@@ -385,7 +390,8 @@ services:
         VPN_PORT_FORWARDING_DOWN_COMMAND=/bin/sh -c 'wget -O- -nv --retry-connrefused --post-data
         "json={\"listen_port\":0,\"current_network_interface\":\"lo\"}"
         http://127.0.0.1:8080/api/v2/app/setPreferences'
-      - UPDATER_PERIOD=24h
+      # Gluetun wiki: no less than 360h, or providers may block the updater.
+      - UPDATER_PERIOD=360h
       # ProtonVPN resets DNS-over-TLS (:853) inside the tunnel, so the default
       # DoT resolver fails, gluetun's internal healthcheck can't resolve its
       # targets, and the VPN restart-loops. DoH rides :443 and gets through.
