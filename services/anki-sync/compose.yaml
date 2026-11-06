@@ -1,0 +1,51 @@
+---
+services:
+  anki-sync:
+    container_name: anki-sync
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      # `user:password`. Add SYNC_USER2, SYNC_USER3, ... the same way for more
+      # accounts; each gets its own collection.
+      - SYNC_USER1=${ANKI_SYNC_USER1:?ANKI_SYNC_USER1 not set}
+      # Nightly copy of every collection into /backups, kept for 7 days.
+      - BACKUP_ENABLED=true
+    # The image's own healthcheck (healthcheck.sh) polls /health on :8080.
+    image: chrislongros/anki-sync-server-enhanced:26.05
+    networks:
+      - proxy
+    # ports:
+    #   - "8080:8080"
+    restart: unless-stopped
+    # No `user:` here: the entrypoint starts as root, remaps its `anki` user to
+    # PUID/PGID from base.env, chowns the volumes, then drops privileges.
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/anki-sync/data:/data
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/anki-sync/backups:/backups
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.anki-sync.rule=Host(`anki-sync.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.anki-sync.tls=true
+      - traefik.http.routers.anki-sync.tls.certresolver=cloudflare
+      - traefik.http.services.anki-sync.loadbalancer.server.port=8080
+      # Homepage
+      - homepage.group=Services
+      - homepage.name=Anki Sync
+      - homepage.icon=anki.png
+      - "homepage.href=https://anki-sync.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Sync server for Anki flashcards
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Anki Sync
+      - gatus.group=Services
+      - "gatus.url=http://anki-sync:8080/health"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] == 200"]'
+
+networks:
+  proxy:
+    external: true
