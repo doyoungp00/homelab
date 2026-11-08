@@ -56,6 +56,8 @@
                 # qbittorrent shares gluetun's network namespace, so its port
                 # is reachable at gluetun's name, not its own.
                 url: http://gluetun:8080
+                username: "{{HOMEPAGE_VAR_QBIT_USER}}"
+                password: "{{HOMEPAGE_VAR_QBIT_PASS}}"
 - Media:
       - Suwayomi:
             weight: 0

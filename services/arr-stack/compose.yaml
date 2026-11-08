@@ -449,6 +449,13 @@ services:
       - traefik.http.routers.qbittorrent.service=qbittorrent
       - traefik.http.routers.qbittorrent.middlewares=authentik@docker
       - traefik.http.services.qbittorrent.loadbalancer.server.port=8080
+      # API bypasses the Authentik wall: remote apps (qBitController etc.)
+      # call /api/v2 directly and can't follow a login redirect, so it relies
+      # on qBittorrent's own login. Longer rule wins over the router above.
+      - traefik.http.routers.qbittorrent-api.rule=Host(`qbit.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`) && PathPrefix(`/api/`)
+      - traefik.http.routers.qbittorrent-api.tls=true
+      - traefik.http.routers.qbittorrent-api.tls.certresolver=cloudflare
+      - traefik.http.routers.qbittorrent-api.service=qbittorrent
       - gatus[1].name=qBittorrent
       - gatus[1].group=arr Stack
       - "gatus[1].url=http://gluetun:8080"
