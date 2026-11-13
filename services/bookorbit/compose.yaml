@@ -68,6 +68,23 @@ services:
       - traefik.http.routers.bookorbit.tls=true
       - traefik.http.routers.bookorbit.tls.certresolver=cloudflare
       - traefik.http.services.bookorbit.loadbalancer.server.port=3000
+      # KOReader plugin from outside the LAN. Only the routes the plugin
+      # calls, all authenticated by KOReader sync credentials (not the web
+      # login): kosync auth and progress, and /koreader/plugin/* (sync,
+      # catalog, downloads, self-update). Everything else on this host,
+      # including the web UI, login, setup and the JWT-guarded /koreader
+      # credential and device settings, has no route and 404s at Traefik.
+      - "traefik.http.routers.bookorbit-koreader.rule=Host(`bookorbit.${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set}`) && (Path(`/api/v1/koreader/users/auth`) || PathPrefix(`/api/v1/koreader/syncs/`) || PathPrefix(`/api/v1/koreader/plugin/`))"
+      - traefik.http.routers.bookorbit-koreader.tls=true
+      - traefik.http.routers.bookorbit-koreader.tls.certresolver=cloudflare
+      - traefik.http.routers.bookorbit-koreader.service=bookorbit
+      - traefik.http.routers.bookorbit-koreader.middlewares=bookorbit-koreader-ratelimit
+      # BookOrbit doesn't throttle these routes, and a wrong key for a real
+      # username costs a bcrypt compare. Per client IP; the burst covers a
+      # page of catalog thumbnails.
+      - traefik.http.middlewares.bookorbit-koreader-ratelimit.ratelimit.average=5
+      - traefik.http.middlewares.bookorbit-koreader-ratelimit.ratelimit.period=1s
+      - traefik.http.middlewares.bookorbit-koreader-ratelimit.ratelimit.burst=60
       # Homepage
       - homepage.group=Media
       - homepage.name=BookOrbit
