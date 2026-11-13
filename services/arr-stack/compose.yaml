@@ -251,6 +251,11 @@ services:
       - path: ../shared/env/base.env
     environment:
       - LOG_LEVEL=info
+      # Node gives each resolved address 250ms to connect before trying the
+      # next. Connecting to TMDB's CloudFront edge takes longer than that from
+      # here, so every IPv4 attempt timed out (IPv6 is unreachable) and Seerr
+      # returned 500s and blank pages.
+      - NODE_OPTIONS=--network-family-autoselection-attempt-timeout=2000
     healthcheck:
       interval: 30s
       retries: 3
