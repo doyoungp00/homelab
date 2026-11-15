@@ -37,10 +37,8 @@ LOCK_FILE = Path(os.environ.get("DEPLOY_LOCK_FILE", "/tmp/homelab-deploy.lock"))
 BRANCH = os.environ.get("BRANCH", "main")
 
 # Pinned rather than left to Docker's default address pool, because several
-# services have to name it in their own config: Home Assistant's
-# trusted_proxies, so it reads X-Forwarded-For from Traefik instead of treating
-# every user as one client, slskd's API key CIDR, and Glances' bind address
-# (the network's gateway). Letting Docker choose would make that a value each
+# services have to name it in their own config: slskd's API key CIDR, and
+# Glances' bind address (the network's gateway). Letting Docker choose would make that a value each
 # config has to rediscover at deploy time; pinning makes it a constant they can
 # simply state.
 PROXY_SUBNET = "172.16.25.0/24"

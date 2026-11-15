@@ -28,7 +28,6 @@ Docker Compose services for a self-hosted homelab running on TrueNAS SCALE. Ever
 | [Gatus Generator](services/gatus/README.md)                                            | Generates Gatus's config from `gatus.*` container labels                 |
 | [Glances](services/glances/README.md)                                                  | Host system monitor                                                      |
 | [Gluetun](services/arr-stack/README.md)                                                | VPN tunnel shared by Prowlarr, qBittorrent, and Suwayomi-Server          |
-| [Home Assistant](services/homeassistant/README.md)                                     | Home automation                                                          |
 | [Homepage](services/homepage/README.md)                                                | Dashboard for every service                                              |
 | [Immich](services/immich/README.md)                                                    | Photo and video library                                                  |
 | [Jellyfin](services/jellyfin/README.md)                                                | Movie and TV streaming                                                   |
@@ -49,6 +48,12 @@ Docker Compose services for a self-hosted homelab running on TrueNAS SCALE. Ever
 | [Traefik](services/traefik/README.md)                                                  | Reverse proxy with automatic TLS certificates                            |
 | [Vaultwarden](services/vaultwarden/README.md)                                          | Bitwarden-compatible password and secrets manager                        |
 | [wg-easy](services/wg-easy/README.md)                                                  | WireGuard VPN server                                                     |
+
+# Retired services
+
+Services that used to run here, and why they moved or were dropped.
+
+- **Home Assistant** moved to its own device. The NAS is plugged into a smart plug that reports its power draw and can switch it off and on remotely, and Home Assistant is what reads and controls that plug. While Home Assistant ran on the NAS, it went down whenever the NAS did, so the plug couldn't be used to power-cycle a hung NAS, and the power readings stopped exactly when they mattered. On separate hardware, it keeps working when the NAS doesn't.
 
 # Project structure
 

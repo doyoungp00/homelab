@@ -48,6 +48,6 @@ Accounts are then created on first login in Immich, Karakeep, Dawarich, BookOrbi
 - **wg-easy:** admins only, and not created automatically, since every wg-easy user is an administrator. An admin creates the wg-easy user, who then links Authentik from its account page.
 - **Jellyfin and Seerr:** log in over LDAP with an app password (note 10). New users are created in Jellyfin on first login; give them an app password.
 - **Frigate:** admins only, through the login wall.
-- **Navidrome, Home Assistant, ntfy:** keep their own accounts. Create those by hand.
+- **Navidrome, ntfy:** keep their own accounts. Create those by hand.
 
 For someone who already has accounts from before Authentik, see each app's README: most link by email or username on first login, and some ask for the old password once.

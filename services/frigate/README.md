@@ -18,7 +18,7 @@ Frigate is a network video recorder (NVR) with real-time object detection for IP
 
 3. TLS is disabled in Frigate, since Traefik handles it. Enabling it breaks the route.
 
-4. `frigate-stream` exposes port 5000, the unauthenticated UI/API, through Traefik so the Homepage camera card can load its stream over HTTPS. It's behind the login wall; the card loads in a browser that already has the dashboard's Authentik session. Homepage's widget and Gatus use port 5000 directly over the `proxy` network, as Home Assistant's integration does, so anything on that network can still read it.
+4. `frigate-stream` exposes port 5000, the unauthenticated UI/API, through Traefik so the Homepage camera card can load its stream over HTTPS. It's behind the login wall; the card loads in a browser that already has the dashboard's Authentik session. Homepage's widget and Gatus use port 5000 directly over the `proxy` network, so anything on that network can still read it.
 
 5. WebRTC (port 8555) is published directly on the host, not through Traefik.
 
