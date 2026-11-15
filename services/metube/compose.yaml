@@ -1,0 +1,65 @@
+---
+services:
+  metube:
+    # Starts as root only to chown its directories and drop to PUID:PGID
+    # through gosu; these are the capabilities that takes.
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    cap_drop:
+      - ALL
+    container_name: metube
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      # Queue and history in appdata, not a hidden folder in the library.
+      - STATE_DIR=/state
+      # Downloads go direct by default. Picking the "VPN" preset (Advanced
+      # Options) sends one through firefox-gluetun's HTTP proxy instead, which
+      # fails rather than falling back to the home IP when the tunnel is down.
+      # If that proxy's login is turned on, the URL needs it:
+      # http://user:password@firefox-gluetun:8888
+      - 'YTDL_OPTIONS_PRESETS={"VPN": {"proxy": "http://firefox-gluetun:8888"}}'
+    image: ghcr.io/alexta69/metube:latest
+    networks:
+      - proxy
+    # ports:
+    #   - "8081:8081"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/metube/state:/state
+      - ${MNT_MEDIA:?MNT_MEDIA not set}/Videos:/downloads
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.metube.rule=Host(`metube.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.metube.tls=true
+      - traefik.http.routers.metube.tls.certresolver=cloudflare
+      # MeTube has no login of its own.
+      - traefik.http.routers.metube.middlewares=authentik@docker
+      - traefik.http.services.metube.loadbalancer.server.port=8081
+      # Homepage
+      - homepage.group=Downloads
+      - homepage.name=MeTube
+      - homepage.icon=metube.png
+      - "homepage.href=https://metube.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Download videos from websites
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=MeTube
+      - gatus.group=Downloads
+      - "gatus.url=http://metube:8081"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] == 200"]'
+
+networks:
+  proxy:
+    external: true
