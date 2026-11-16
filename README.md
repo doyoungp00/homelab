@@ -28,6 +28,7 @@ Docker Compose services for a self-hosted homelab running on TrueNAS SCALE. Ever
 | [Gatus Generator](services/gatus/README.md)                                            | Generates Gatus's config from `gatus.*` container labels                 |
 | [Glances](services/glances/README.md)                                                  | Host system monitor                                                      |
 | [Gluetun](services/arr-stack/README.md)                                                | VPN tunnel shared by Prowlarr, qBittorrent, and Suwayomi-Server          |
+| [Hermes Agent](services/hermes-agent/README.md)                                        | Personal AI agent with GBrain memory and an Obsidian wiki                |
 | [Homepage](services/homepage/README.md)                                                | Dashboard for every service                                              |
 | [Immich](services/immich/README.md)                                                    | Photo and video library                                                  |
 | [Jellyfin](services/jellyfin/README.md)                                                | Movie and TV streaming                                                   |

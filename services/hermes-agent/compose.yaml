@@ -1,0 +1,157 @@
+---
+services:
+  hermes:
+    container_name: hermes
+    env_file:
+      - path: .env
+        required: false
+      - path: ../shared/env/base.env
+    environment:
+      # The image's s6 init remaps its `hermes` user to these, so files in
+      # /opt/data belong to the stack's usual 568.
+      - HERMES_UID=568
+      - HERMES_GID=568
+      - HERMES_DASHBOARD=1
+      - "HERMES_DASHBOARD_PUBLIC_URL=https://hermes.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      # The dashboard refuses to start on a non-loopback bind without a login
+      # of its own. It stores API keys and drives the agent, so it gets this
+      # one in addition to the Authentik wall.
+      - HERMES_DASHBOARD_BASIC_AUTH_USERNAME=${HERMES_DASHBOARD_BASIC_AUTH_USERNAME:?HERMES_DASHBOARD_BASIC_AUTH_USERNAME not set}
+      - HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=${HERMES_DASHBOARD_BASIC_AUTH_PASSWORD:?HERMES_DASHBOARD_BASIC_AUTH_PASSWORD not set}
+      - HERMES_DASHBOARD_BASIC_AUTH_SECRET=${HERMES_DASHBOARD_BASIC_AUTH_SECRET:?HERMES_DASHBOARD_BASIC_AUTH_SECRET not set}
+      # gbrain's bearer token, minted after gbrain's first start (README,
+      # "Connecting gbrain"). Referenced as ${GBRAIN_MCP_TOKEN} in the MCP
+      # entry's header, so it never sits in Hermes' config.yaml.
+      - GBRAIN_MCP_TOKEN=${GBRAIN_MCP_TOKEN:-}
+    # Model provider keys, chat platforms, memory and sessions are Hermes'
+    # own, under /opt/data (`hermes setup`).
+    image: nousresearch/hermes-agent:latest
+    command: ["gateway", "run"]
+    mem_limit: 4g
+    networks:
+      - hermes-agent
+      - proxy
+    restart: unless-stopped
+    stop_grace_period: 30s
+    volumes:
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/hermes-agent/hermes:/opt/data
+      # The Obsidian wiki Hermes maintains (vault/AGENTS.md), synced to
+      # devices by the syncthing service. Seeded by hooks.py.
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/hermes-agent/vault:/vault
+    labels:
+      # Traefik
+      - traefik.enable=true
+      - traefik.http.routers.hermes.rule=Host(`hermes.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.hermes.tls=true
+      - traefik.http.routers.hermes.tls.certresolver=cloudflare
+      - traefik.http.routers.hermes.middlewares=authentik@docker
+      - traefik.http.services.hermes.loadbalancer.server.port=9119
+      # Homepage
+      - homepage.group=Services
+      - homepage.name=Hermes Agent
+      - homepage.icon=mdi-robot-outline
+      - "homepage.href=https://hermes.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
+      - homepage.description=Personal AI agent with long-term memory
+      # Gatus
+      - gatus.enable=true
+      - gatus.name=Hermes Agent
+      - gatus.group=Services
+      - "gatus.url=http://hermes:9119"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] < 500"]'
+
+  # Hermes' long-term memory, served over HTTP MCP on this stack's private
+  # network only; Hermes is its one client.
+  gbrain:
+    build: .
+    container_name: gbrain
+    depends_on:
+      gbrain-db:
+        condition: service_healthy
+        restart: true
+    environment:
+      # sslmode=disable: gbrain requires TLS to any non-local Postgres by
+      # default, and this one is only reachable on the stack's own network.
+      - "GBRAIN_DATABASE_URL=postgresql://gbrain:${GBRAIN_DB_PASSWORD:?GBRAIN_DB_PASSWORD not set}@gbrain-db:5432/gbrain?sslmode=disable"
+      # Owner credential for `gbrain mcp admin`; stable across restarts.
+      - GBRAIN_ADMIN_BOOTSTRAP_TOKEN=${GBRAIN_ADMIN_BOOTSTRAP_TOKEN:?GBRAIN_ADMIN_BOOTSTRAP_TOKEN not set}
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 60s
+      test:
+        - CMD
+        - bun
+        - -e
+        - "fetch('http://127.0.0.1:3131/health').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      timeout: 10s
+    networks:
+      - hermes-agent
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    user: "568:568"
+    # No Gatus check: Gatus is on `proxy` and can't reach this network. The
+    # healthcheck above covers it.
+    volumes:
+      # Created and chowned to 568 by hooks.py.
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/hermes-agent/gbrain:/data
+
+  # Re-indexes the vault into gbrain every 15 minutes. gbrain doesn't watch a
+  # plain folder, and Hermes' own cron can't run gbrain's CLI from its
+  # container. Unchanged files are skipped by content hash, so a quiet run is
+  # cheap. Shares gbrain's /data, which Postgres makes safe.
+  gbrain-sync:
+    # Same Dockerfile as gbrain; the second build is all cache hits.
+    build: .
+    container_name: gbrain-sync
+    depends_on:
+      gbrain:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          gbrain sync --all || echo "gbrain sync failed (exit $$?)"
+          sleep 900
+        done
+    environment:
+      - "GBRAIN_DATABASE_URL=postgresql://gbrain:${GBRAIN_DB_PASSWORD:?GBRAIN_DB_PASSWORD not set}@gbrain-db:5432/gbrain?sslmode=disable"
+    init: true
+    networks:
+      - hermes-agent
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    user: "568:568"
+    volumes:
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/hermes-agent/gbrain:/data
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/hermes-agent/vault:/vault:ro
+
+  gbrain-db:
+    container_name: gbrain-db
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_DB: gbrain
+      POSTGRES_PASSWORD: ${GBRAIN_DB_PASSWORD:?GBRAIN_DB_PASSWORD not set}
+      POSTGRES_USER: gbrain
+    healthcheck:
+      interval: 10s
+      retries: 10
+      start_period: 20s
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      timeout: 5s
+    image: pgvector/pgvector:pg17
+    networks:
+      - hermes-agent
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/hermes-agent/gbrain-db:/var/lib/postgresql/data
+
+networks:
+  hermes-agent: null
+  proxy:
+    external: true

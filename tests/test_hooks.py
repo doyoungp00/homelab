@@ -464,6 +464,54 @@ class TestFirefoxHook:
         assert commands[-1][-1] == "firefox"
 
 
+class TestHermesAgentHook:
+    """The real hook. gbrain runs as 568 and dies with EACCES on a root-owned
+    /data, which is what Docker would create on a fresh host; Hermes and
+    Syncthing (568) need to write the vault."""
+
+    @pytest.fixture
+    def service_dir(self, tmp_path: Path) -> Path:
+        service_dir = tmp_path / "hermes-agent"
+        real = Path(__file__).resolve().parent.parent / "services/hermes-agent"
+        (service_dir / "vault").mkdir(parents=True)
+        (service_dir / "hooks.py").write_text((real / "hooks.py").read_text())
+        for name in ("AGENTS.md", "index.md", "log.md"):
+            (service_dir / "vault" / name).write_text((real / "vault" / name).read_text())
+        return service_dir
+
+    @pytest.fixture
+    def chowned(self, monkeypatch: pytest.MonkeyPatch) -> list[str]:
+        chowned: list[str] = []
+        monkeypatch.setattr(
+            "os.chown",
+            lambda path, uid, gid: chowned.append(Path(path).name) if (uid, gid) == (568, 568) else None,
+        )
+        return chowned
+
+    def test_creates_gbrain_data_and_seeds_the_vault(
+        self, service_dir: Path, appdata: Path, chowned: list[str]
+    ) -> None:
+        assert fire(service_dir) is False
+
+        vault = appdata / "hermes-agent/vault"
+        assert (appdata / "hermes-agent/gbrain").is_dir()
+        assert (vault / "AGENTS.md").read_text().startswith("# Wiki schema")
+        assert (vault / "wiki/concepts").is_dir()
+        assert (vault / "raw").is_dir()
+        assert {"gbrain", "vault", "AGENTS.md", "raw", "concepts"} <= set(chowned)
+
+    def test_never_overwrites_a_vault_file_after_seeding(
+        self, service_dir: Path, appdata: Path, chowned: list[str]
+    ) -> None:
+        index = appdata / "hermes-agent/vault/index.md"
+        index.parent.mkdir(parents=True)
+        index.write_text("edited by the agent\n")
+
+        fire(service_dir)
+
+        assert index.read_text() == "edited by the agent\n"
+
+
 class TestDeployIntegration:
     def run_apply(
         self,
