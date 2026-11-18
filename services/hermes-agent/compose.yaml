@@ -12,6 +12,9 @@ services:
       - HERMES_UID=568
       - HERMES_GID=568
       - HERMES_DASHBOARD=1
+      # The image confines write_file/patch to /opt/data; the wiki lives at
+      # /vault. Listing both keeps the sandbox, just one directory wider.
+      - HERMES_WRITE_SAFE_ROOT=/opt/data:/vault
       - "HERMES_DASHBOARD_PUBLIC_URL=https://hermes.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
       # The dashboard refuses to start on a non-loopback bind without a login
       # of its own. It stores API keys and drives the agent, so it gets this
