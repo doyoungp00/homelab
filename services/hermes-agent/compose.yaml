@@ -41,6 +41,8 @@ services:
     labels:
       # Traefik
       - traefik.enable=true
+      # Also on hermes-agent, which Traefik can't reach.
+      - traefik.docker.network=proxy
       - traefik.http.routers.hermes.rule=Host(`hermes.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
       - traefik.http.routers.hermes.tls=true
       - traefik.http.routers.hermes.tls.certresolver=cloudflare
