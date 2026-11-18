@@ -76,7 +76,7 @@ After the first deploy, once per fresh install:
    docker exec gbrain gbrain sync --all
    ```
 
-   From then on `gbrain-sync` keeps it current.
+   On a fresh vault this imports 0 pages, which is expected: gbrain skips `AGENTS.md`, `index.md` and `log.md` as metafiles, and `raw/` and `wiki/` start empty. From then on `gbrain-sync` keeps it current.
 
 7. **Tell the agent about both.** Agents seldom use a memory or a wiki nobody told them about, and gbrain's own `gbrain setup hermes` can't write this from a separate container. Add to `SOUL.md` in Hermes' data directory, e.g.: *"You maintain my wiki at /vault. Before working on it, read /vault/AGENTS.md and follow it. Before answering anything, search GBrain (mcp__gbrain__recall, found with tool_search) for what you already know; save anything worth keeping with mcp__gbrain__remember."*
 
