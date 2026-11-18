@@ -24,9 +24,9 @@ An agent that stays online can take requests from a phone, run scheduled jobs, a
 
 7. `hooks.py` creates `${MNT_APPDATA}/hermes-agent/gbrain` and the vault owned by `568` before deploying. Docker would otherwise create them as root: gbrain fails at startup with `EACCES`, and Hermes and Syncthing can't write the vault.
 
-8. The vault is at `${MNT_APPDATA}/hermes-agent/vault`, mounted at `/vault` (read-write in `hermes`, read-only in `gbrain-sync`). `hooks.py` seeds it once from `vault/`: the schema Hermes follows (`AGENTS.md`), `index.md`, `log.md`, and the `raw/` and `wiki/` folders. After that, the repo never touches it again; edit `AGENTS.md` in the vault itself to change the conventions.
+8. The vault is at `${MNT_APPDATA}/hermes-agent/vault`, mounted at `/vault` (read-write in `hermes`, read-only in `gbrain` and `gbrain-sync`). `hooks.py` seeds it once from `vault/`: the schema Hermes follows (`AGENTS.md`), `index.md`, `log.md`, and the `raw/` and `wiki/` folders. After that, the repo never touches it again; edit `AGENTS.md` in the vault itself to change the conventions.
 
-9. The vault is a plain folder, not a git repository: gbrain imports it by reading the files (unchanged ones are skipped by content hash), and Syncthing's file versioning stands in for history. Pages deleted from the vault stay in gbrain until removed there.
+9. The vault is a plain folder, not a git repository: gbrain imports it by reading the files (unchanged ones are skipped by content hash), and Syncthing's file versioning stands in for history. Pages deleted from the vault stay in gbrain until removed there (`gbrain delete`). gbrain only takes this plain-folder path when `/vault` exists in the container running the command, which is why `gbrain` mounts it too; without it, sync fails with `Not inside a git repository: /vault`.
 
 10. To upgrade gbrain, bump `GBRAIN_VERSION` in `Dockerfile` to the stable channel's current release ([VERSION on its stable branch](https://github.com/garrytan/gbrain/blob/stable/VERSION)). Hermes follows `:latest`.
 
@@ -71,7 +71,7 @@ After the first deploy, once per fresh install:
 6. **Register the vault with gbrain.** The link setting lets Obsidian-style `[[page]]` links resolve across folders:
 
    ```sh
-   docker exec gbrain gbrain sources add wiki --path /vault --federated --force
+   docker exec gbrain gbrain sources add wiki --path /vault --federated
    docker exec gbrain gbrain config set link_resolution.global_basename true
    docker exec gbrain gbrain sync --all
    ```

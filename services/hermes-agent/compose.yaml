@@ -96,6 +96,10 @@ services:
     volumes:
       # Created and chowned to 568 by hooks.py.
       - ${MNT_APPDATA:?MNT_APPDATA not set}/hermes-agent/gbrain:/data
+      # The `wiki` source's path. gbrain only treats it as a plain folder
+      # (no git needed) when it exists in the container running the command;
+      # otherwise sync falls back to git and fails.
+      - ${MNT_APPDATA:?MNT_APPDATA not set}/hermes-agent/vault:/vault:ro
 
   # Re-indexes the vault into gbrain every 15 minutes. gbrain doesn't watch a
   # plain folder, and Hermes' own cron can't run gbrain's CLI from its
