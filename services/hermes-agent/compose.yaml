@@ -54,7 +54,7 @@ services:
       # Homepage
       - homepage.group=Services
       - homepage.name=Hermes Agent
-      - homepage.icon=hermes-agent
+      - homepage.icon=hermes
       - "homepage.href=https://hermes.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}"
       - homepage.description=Personal AI agent with long-term memory
       # Gatus
