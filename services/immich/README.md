@@ -18,7 +18,19 @@ Immich is a self-hosted photo and video library, similar to Google Photos.
 
 3. The `-openvino` ML image only works on Intel hardware. Use a different tag (or none) on other hardware.
 
-4. Login is through OIDC against the `immich` application in Authentik (`authentik/blueprints/immich.yaml`), open to the `admins` and `family` groups. Immich's side of it is in its own admin settings, not this repo; see "Setting up OIDC" below. A first OAuth login links to the existing account with the same email, so a person's Authentik email must match their Immich one, or they get a new, empty account. Immich isn't behind the login wall: the mobile apps and shared links need to reach it directly.
+4. Login is through OIDC against the `immich` application in Authentik (`authentik/blueprints/immich.yaml`), open to the `admins` and `family` groups. Immich's side of it is in its own admin settings, not this repo; see "Setting up OIDC" below. A first OAuth login links to the existing account with the same email, so a person's Authentik email must match their Immich one, or they get a new, empty account. Immich isn't behind the login wall: the mobile apps need to reach it directly. It is only routed on the local domain; outside the house, use WireGuard.
+
+5. Shared links are public through [Immich Public Proxy](https://docs.ipp.nz) at `immich.${DOMAIN_PUBLIC}`, so family can open them without an account. It is the only part of Immich reachable from the internet: it serves shared links read-only and needs no API key, so login and the API stay off the public hostname. See "Sharing with family" below.
+
+# Sharing with family
+
+1. Once, in Immich, set **Administration → Settings → Server → External domain** to `https://immich.${DOMAIN_PUBLIC}`. Every share link Immich copies then points at the proxy instead of the local domain.
+
+2. For each share: leave **Allow public user to upload** off, set an expiry, and add a password if it's sensitive. **Allow download** controls whether family can download, because the proxy follows each share's own setting. The proxy never shows EXIF or location, whatever **Show metadata** is set to.
+
+3. Don't use a custom URL (slug) for a share. The proxy doesn't serve them, because a short slug can be guessed and the random key can't.
+
+4. `https://immich.${DOMAIN_PUBLIC}/share/healthcheck` returns `ok` when the proxy can reach Immich.
 
 # Setting up OIDC
 

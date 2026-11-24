@@ -106,6 +106,58 @@ services:
       - gatus.interval=10m
       - 'gatus.conditions=["[STATUS] == 200", "[RESPONSE_TIME] < 1000"]'
 
+  # The only public face of Immich: serves shared links read-only and nothing
+  # else, so login and the API stay LAN/WireGuard-only. Needs no API key.
+  immich-public-proxy:
+    container_name: immich_public_proxy
+    cap_drop:
+      - ALL
+    depends_on:
+      - immich-server
+    environment:
+      IMMICH_URL: http://immich-server:2283
+      PUBLIC_BASE_URL: https://immich.${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set}
+      # Only keys that differ from IPP's defaults, which already hide all
+      # metadata (EXIF, GPS) and downloads. Downloads follow each share's own
+      # toggle in Immich. Slug links are off: a custom slug is guessable, the
+      # random share key isn't. No home page, so `/` reveals nothing.
+      CONFIG: |
+        {
+          "ipp": {
+            "allowDownload": 1,
+            "allowSlugLinks": false,
+            "showHomePage": false
+          }
+        }
+    healthcheck:
+      test: curl -sf -m 4 http://localhost:3000/share/healthcheck -o /dev/null || exit 1
+      start_period: 10s
+      timeout: 5s
+    # "4" follows releases within major version 4.
+    image: alangrainger/immich-public-proxy:4
+    networks:
+      - proxy
+    read_only: true
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      # Traefik
+      # Public hostname only; on the LAN, use Immich itself.
+      - traefik.enable=true
+      - traefik.http.routers.immich-public-proxy.rule=Host(`immich.${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set}`)
+      - traefik.http.routers.immich-public-proxy.tls=true
+      - traefik.http.routers.immich-public-proxy.tls.certresolver=cloudflare
+      - traefik.http.services.immich-public-proxy.loadbalancer.server.port=3000
+      # Gatus
+      # Returns ok only when the proxy can also reach Immich.
+      - gatus.enable=true
+      - gatus.name=Immich Public Proxy
+      - gatus.group=Media
+      - "gatus.url=http://immich-public-proxy:3000/share/healthcheck"
+      - gatus.interval=10m
+      - 'gatus.conditions=["[STATUS] == 200", "[BODY] == ok"]'
+
   redis:
     container_name: immich_redis
     cap_drop:

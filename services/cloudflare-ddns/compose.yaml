@@ -14,7 +14,7 @@ services:
       - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:?CLOUDFLARE_API_TOKEN not set}
       # Every public hostname. nas. is the WireGuard endpoint (wg-easy's
       # WG_HOST), the rest are routed by Traefik on ${DOMAIN_PUBLIC}.
-      - DOMAINS=nas.${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set},auth.${DOMAIN_PUBLIC},cloud.${DOMAIN_PUBLIC},jellyfin.${DOMAIN_PUBLIC},navidrome.${DOMAIN_PUBLIC},ntfy.${DOMAIN_PUBLIC},bookorbit.${DOMAIN_PUBLIC}
+      - DOMAINS=nas.${DOMAIN_PUBLIC:?DOMAIN_PUBLIC not set},auth.${DOMAIN_PUBLIC},cloud.${DOMAIN_PUBLIC},jellyfin.${DOMAIN_PUBLIC},navidrome.${DOMAIN_PUBLIC},ntfy.${DOMAIN_PUBLIC},bookorbit.${DOMAIN_PUBLIC},immich.${DOMAIN_PUBLIC}
       # DNS only, never through Cloudflare's proxy: WireGuard is UDP, which
       # the proxy doesn't carry; CrowdSec would see (and ban) Cloudflare's IPs
       # instead of clients' unless Traefik trusts them; and the proxy caps
