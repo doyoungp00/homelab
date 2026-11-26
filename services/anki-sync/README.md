@@ -22,4 +22,4 @@ Anki Sync Server Enhanced packages Anki's official sync server with a few extras
 
 5. `${MNT_APPDATA}/anki-sync/data` holds every user's collection and media. `BACKUP_ENABLED` copies it into `${MNT_APPDATA}/anki-sync/backups` every night at 03:00 and keeps 7 days of copies. Those copies sit on the same pool, so they guard against a bad sync, not against losing the disk.
 
-6. The image's optional dashboard (`:8081`) and Prometheus metrics (`:9090`) are left off. The dashboard has no login unless `DASHBOARD_AUTH` is set.
+6. The image's web dashboard (`:8081`) is on and shares `https://anki-sync.<DOMAIN_LOCAL>/` with the sync API. Traefik sends `/sync/` and `/msync/`, the only paths Anki clients call, to the sync server on `:8080`, and every other path to the dashboard. Its basic-auth login comes from `ANKI_SYNC_DASHBOARD_AUTH` in `secret.sops.env`, as `user:password`, with the same `$` quoting caveat as note 1. The dashboard can view logs and create backups, so don't remove that login. Gatus checks `/health` on `:8080` directly over the Docker network, so the path routing doesn't affect it. The Prometheus metrics endpoint (`:9090`) is left off.

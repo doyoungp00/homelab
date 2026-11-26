@@ -12,6 +12,8 @@ services:
       - SYNC_USER1=${ANKI_SYNC_USER1:?ANKI_SYNC_USER1 not set}
       # Nightly copy of every collection into /backups, kept for 7 days.
       - BACKUP_ENABLED=true
+      - DASHBOARD_ENABLED=true
+      - DASHBOARD_AUTH=${ANKI_SYNC_DASHBOARD_AUTH:?ANKI_SYNC_DASHBOARD_AUTH not set}
     # The image's own healthcheck (healthcheck.sh) polls /health on :8080.
     image: chrislongros/anki-sync-server-enhanced:26.05
     networks:
@@ -28,10 +30,20 @@ services:
     labels:
       # Traefik
       - traefik.enable=true
-      - traefik.http.routers.anki-sync.rule=Host(`anki-sync.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      # Sync API: only the paths Anki clients use
+      - traefik.http.routers.anki-sync.rule=Host(`anki-sync.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`) && (PathPrefix(`/sync/`) || PathPrefix(`/msync/`))
+      - traefik.http.routers.anki-sync.priority=100
       - traefik.http.routers.anki-sync.tls=true
       - traefik.http.routers.anki-sync.tls.certresolver=cloudflare
+      - traefik.http.routers.anki-sync.service=anki-sync
       - traefik.http.services.anki-sync.loadbalancer.server.port=8080
+      # Dashboard: everything else on the same host
+      - traefik.http.routers.anki-sync-dashboard.rule=Host(`anki-sync.${DOMAIN_LOCAL:?DOMAIN_LOCAL not set}`)
+      - traefik.http.routers.anki-sync-dashboard.priority=10
+      - traefik.http.routers.anki-sync-dashboard.tls=true
+      - traefik.http.routers.anki-sync-dashboard.tls.certresolver=cloudflare
+      - traefik.http.routers.anki-sync-dashboard.service=anki-sync-dashboard
+      - traefik.http.services.anki-sync-dashboard.loadbalancer.server.port=8081
       # Homepage
       - homepage.group=Services
       - homepage.name=Anki Sync
