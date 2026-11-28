@@ -28,6 +28,10 @@ services:
       - "--entrypoints.websecure.http.encodedCharacters.allowEncodedSlash=true"
       - "--entrypoints.websecure.http.encodedCharacters.allowEncodedQuestionMark=true"
       - "--entrypoints.websecure.http.encodedCharacters.allowEncodedPercent=true"
+      # Traefik v3 caps reading a whole request, body included, at 60s, which
+      # cuts off large uploads (Immich videos fail partway with a 499).
+      # The cost: a slow client can hold a connection open that long on every router of this entrypoint.
+      - "--entrypoints.websecure.transport.respondingTimeouts.readTimeout=3600s"
       # CrowdSec feeds on the access log; crowdsec's docker acquisition reads
       # it off this container's stdout, so no shared log volume is needed.
       - "--accesslog=true"
